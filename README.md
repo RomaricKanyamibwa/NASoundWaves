@@ -1,2 +1,2 @@
-# NASoundWaves
-Sound Waves in rarefiedgas around smooth solid bodies
+# Numerical Analysis on Sound Waves
+Sound Waves in a rarefied gas around smooth solid bodies
