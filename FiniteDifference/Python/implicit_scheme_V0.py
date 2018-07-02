@@ -3,11 +3,12 @@ import pprint
 from numpy.linalg import inv
 import os
 import matplotlib.pyplot as plt
+import random
 
 # spatial area and mesh
 X_min = 0
 X_max = 1
-Nx = 10
+Nx = 20
 dx = 1./Nx
 
 # time domain
@@ -41,10 +42,15 @@ U = numpy.zeros((4*Nx,Nt)) #Global matrix (u1,u2,u3,u4)
 #	|	P(0,k)  P(1,k)  .. P(n,k)	|
 #	---------------------------------
 
-# - Browsing the matrix - #
+# - Browsing the matrix for initialization - #
 for n in range(0,Nt):
 	for k in range(0,4*Nx):
-		U[k,n]=0.0005*(n+1)/(k+1)
+		U[k,n]=random.random()
+
+U[0,0]=0
+U[Nx,0]=0
+U[2*Nx,0]=0
+U[3*Nx,0]=0
 
 #print "Array non-initialized yet, coefficients show different parts of it "
 #print U
@@ -139,11 +145,16 @@ numpy.matrix(M2)
 M=inv(M1)*M2
 
 #Un+1 = M * Un
+print U
+print "---------------------"
 U=numpy.matrix(U)
 for i in range(1,Nt):
+	print str(i*100/Nt)+"%"
 	U[:,i]=M*U[:,i-1]
-	plt.plot(U[:,0])
+	plt.figure(i)
+	plt.plot(U[:,i],color='blue')
 	plt.savefig("img_implicit_deplacement/img"+str(i)+".png")
+	plt.close(i)
 
 print U
 
