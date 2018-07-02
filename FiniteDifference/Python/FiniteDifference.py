@@ -28,6 +28,8 @@ import scipy.sparse.linalg
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 
+import random
+
 from pprint import pprint
 
 from sympy.matrices import SparseMatrix
@@ -87,7 +89,7 @@ if do_movie:
 # spatial domain  and  meshing
 X1_min = 0
 X1_max = 1
-Nx1 = 4
+Nx1 = 100
 h1 = 1./Nx1
 X1 = numpy.zeros(Nx1)
 
@@ -114,6 +116,7 @@ dt_over_h3 = dt/h3
 dt_array=[dt_over_h1,dt_over_h2,dt_over_h3]
 h_array=[h1,h2,h3]
 Nx_array=[Nx1,Nx2,Nx3]
+X_array=[[X1_min,X1_max,X1],[X2_min,X2_max,X2],[X3_min,X3_max,X3]]
 
 # approximate number of images generated
 n_images = 100
@@ -129,7 +132,10 @@ u2 = numpy.zeros(Nx2)
 next_u2 = numpy.zeros(Nx2)     
 
 u3 = numpy.zeros(Nx3)
-next_u3 = numpy.zeros(Nx3)     
+next_u3 = numpy.zeros(Nx3)
+
+u_array=[u1,u2,u3,PH0]
+
 
 # fonction initiale
 
@@ -144,21 +150,25 @@ def u3_ini(x):
 
 for i in range(0,Nx1):
     X1[i] = X1_min + i*h1*(X1_max-X1_min)
-    u1[i] = u1_ini(X1[i])
+    u1[i] = random.random()#u1_ini(X1[i])
 
 for i in range(0,Nx2):
     X2[i] = X2_min + i*h2*(X2_max-X2_min)
-    u2[i] = u2_ini(X2[i])
+    u2[i] = random.random()#u2_ini(X2[i])
     
 for i in range(0,Nx3):
     X3[i] = X3_min + i*h3*(X3_max-X3_min)
-    u3[i] = u3_ini(X3[i])
+    u3[i] = random.random()#u3_ini(X3[i])
 # pour la visu:
 #Y_min = 0
 #Y_max = 1.1*max(v_max,u_max) 
 
 # assembly of a sparse matrix M using the vector W of the previous time
 
+Wn=numpy.hstack((u1,u2))
+Wn=numpy.hstack((Wn,u3))
+Wn=numpy.hstack((Wn,PH0))
+next_Wn = numpy.zeros(4*Nx1)
 
 def constr_matrix_Ai(ielem,const,sign=1):
     assert implicite
@@ -202,10 +212,10 @@ def assemble_M():
     I=sparse.coo_matrix(I)
     Zero=sparse.coo_matrix([[0 for i in range(Nx1)] for j in range(Nx1)])
     
-    pprint(Zero)
-    pprint(Zero.todense())
-    pprint(sparse.coo_matrix(I))
-    pprint((I))
+    #pprint(Zero)
+    #pprint(Zero.todense())
+    #pprint(sparse.coo_matrix(I))
+    #pprint((I))
     B1=constr_matrix_Ai(0,Const_c,-1)
     B2=constr_matrix_Ai(1,Const_c,-1)
     B3=constr_matrix_Ai(2,Const_c,-1)
@@ -214,68 +224,117 @@ def assemble_M():
     B2_d=constr_matrix_Ai(1,Const_d,-1)
     B3_d=constr_matrix_Ai(2,Const_d,-1)
     
-    pprint(SparseMatrix(A1.todense()))
-    pprint(SparseMatrix(B1.todense()))
+    #pprint(SparseMatrix(A1.todense()))
+    #pprint(SparseMatrix(B1.todense()))
     
-    M=numpy.hstack((I.todense(),Zero.todense()))
-    M=numpy.hstack((M,Zero.todense()))
-    M=numpy.hstack((M,A1_d.todense()))
-    #M=sparse.hstack(M,Zero)
-    #M=sparse.hstack(M,A1_d)
+    M1=numpy.hstack((I.todense(),Zero.todense()))
+    M1=numpy.hstack((M1,Zero.todense()))
+    M1=numpy.hstack((M1,A1_d.todense()))
+    
+    M2=numpy.hstack((Zero.todense(),I.todense()))
+    M2=numpy.hstack((M2,Zero.todense()))
+    M2=numpy.hstack((M2,A2_d.todense()))
+    
+    M3=numpy.hstack((Zero.todense(),Zero.todense()))
+    M3=numpy.hstack((M3,I.todense()))
+    M3=numpy.hstack((M3,A3_d.todense()))
+    
+    M4=numpy.hstack((A1_d.todense(),A2_d.todense()))
+    M4=numpy.hstack((M4,A3_d.todense()))
+    M4=numpy.hstack((M4,I.todense()))
+    
+    M=numpy.vstack((M1,M2))
+    M=numpy.vstack((M,M3))
+    M=numpy.vstack((M,M4))
     M=sparse.coo_matrix(M)
     pprint(M)
-    pprint(SparseMatrix(M.todense()))
-    return #M
-
-#if do_movie:
-    #ims = []
-    #print("using imagemagick...")
-    #Writer = animation.writers['imagemagick']  # ['ffmpeg']
-    #writer = Writer(fps=15, metadata=dict(artist='Me'), bitrate=1800)
-
-#fig = plt.figure()
-
-
-#def plot_sol(n):
     
-    #fig.clf()
-    #fname = dir_name+"out_"+repr(n)+".png"
-    #print "Plot sol in file ", fname, ", nt = ", n, ", min/max = ", min(u), "/", max(u)
-    #X_full = numpy.concatenate((X,[1.]),axis=0)
-    #u_full = numpy.concatenate((u,[u[0]]),axis=0)
-    ## trace aussi les vitesses:
+    M1=numpy.hstack((I.todense(),Zero.todense()))
+    M1=numpy.hstack((M1,Zero.todense()))
+    M1=numpy.hstack((M1,B1_d.todense()))
+    
+    M2=numpy.hstack((Zero.todense(),I.todense()))
+    M2=numpy.hstack((M2,Zero.todense()))
+    M2=numpy.hstack((M2,B2_d.todense()))
+    
+    M3=numpy.hstack((Zero.todense(),Zero.todense()))
+    M3=numpy.hstack((M3,I.todense()))
+    M3=numpy.hstack((M3,B3_d.todense()))
+    
+    M4=numpy.hstack((B1_d.todense(),B2_d.todense()))
+    M4=numpy.hstack((M4,B3_d.todense()))
+    M4=numpy.hstack((M4,I.todense()))
+    
+    MB=numpy.vstack((M1,M2))
+    MB=numpy.vstack((MB,M3))
+    MB=numpy.vstack((MB,M4))
+    MB=sparse.coo_matrix(MB)
+    pprint(MB)
+    #print(numpy.linalg.det(M.todense()))
+    #print(numpy.linalg.det(MB.todense()))
+    #pprint(SparseMatrix(M.todense()))
+    #pprint(SparseMatrix(MB.todense()))
+    return M,MB
+
+if do_movie:
+    ims = []
+    print("using imagemagick...")
+    Writer = animation.writers['imagemagick']  # ['ffmpeg']
+    writer = Writer(fps=15, metadata=dict(artist='Me'), bitrate=1800)
+
+fig = plt.figure()
+
+
+def plot_sol(n,ielem):
+    
+    fig.clf()
+    fname = dir_name+"out_"+repr(n)+"_u"+str(ielem)+".png"
+    print("Plot sol in file ", fname, ", nt = ", n, ", min/max = ", min(u_array[ielem]), "/", max(u_array[ielem]))
+    X_full = numpy.concatenate((X_array[ielem][2],[1.]),axis=0)
+    u_full = numpy.concatenate((u_array[ielem],[u_array[ielem][0]]),axis=0)
+    # trace aussi les vitesses:
     #v = map(vitesse, u)
     #v_full = numpy.concatenate((v,[v[0]]),axis=0)
-    #plt.xlim(X_min, X_max)
-    ##plt.ylim(Y_min, Y_max)
-    #plt.xlabel('x')
-    #image = (plt.plot(X_full, u_full, '-', color='k'))
-    #image += (plt.plot(X_full, v_full, '-', color='b'))
+    plt.xlim(X_array[ielem][0], X_array[ielem][1])
+    #plt.ylim(Y_min, Y_max)
+    plt.xlabel('x')
+    image = (plt.plot(X_full, u_full, '-', color='k'))
+    #maximage += (plt.plot(X_full, v_full, '-', color='b'))
     
-    #fig.savefig(fname)
-    #if do_movie:
-        #ims.append(image)
+    fig.savefig(fname)
+    if do_movie:
+        ims.append(image)
 
-#plot_sol(0)
+plot_sol(0,0)
+print(Wn)
+# schema numerique       
+for nt in range(0,Nt):               
+    if implicite:
+        print("Implicit Scheme")
+        M,MB = assemble_M()
+        next_Wn[:] = sparse.linalg.spsolve(M, MB*Wn)
 
-### schema numerique       
-#for nt in range(0,Nt):               
-    #if implicite:
-        #M = assemble_M(u)
-        #next_u[:] = sparse.linalg.spsolve(M, u)
-
-    #else:
-        #for i in range(0,Nx):        
+    else:
+        print("ERROR")
+        exit()
+        #for i in range(0,Nx1):        
             #next_u[i] =-dt_over_h*(flux(u[i])-flux(u[i-1]))+u[i]   # ecrire ici le schema explicite
             
-    #u[:] = next_u[:]
+    Nx=Nx1
+    Wn[:] = next_Wn[:]
+    u1[:] = next_Wn[0:Nx]
+    u2[:] = next_Wn[Nx:2*Nx]
+    u3[:] = next_Wn[2*Nx:3*Nx]
+    PH0[:] = next_Wn[3*Nx:]
+    u_array=[u1,u2,u3,PH0]
     #if (nt+1)%periode_images == 0 or (nt+1) == Nt:
-        #plot_sol(nt+1)
+    plot_sol(nt+1,0)
     
 
-#if do_movie:
-    #im_ani = animation.ArtistAnimation(fig, ims, interval=50, repeat_delay=3000, blit=True)
-    #im_ani.save(movie_filename, writer=writer)
+if do_movie:
+    im_ani = animation.ArtistAnimation(fig, ims, interval=50, repeat_delay=3000, blit=True)
+    im_ani.save(movie_filename, writer=writer)
 
-assemble_M()
+M,MB=assemble_M()
+#pprint(MB*Wn)
 print("Done.")
