@@ -49,32 +49,18 @@ from sympy.matrices import SparseMatrix
 #u_max = 200
 
 
-#def vitesse(u_val):    
-    #if(0<u_val<u_max):
-        #return -0.65*u_val+130
-    #else:
-        #return 0
-
-#def flux(u_val):    
-    #return u_val*vitesse(u_val)
-
-
-
 # time discretization: 
 # du/dt(t^n) =  
-# 1:  ( u^n - u^n-1 )/dt        (impl) 
-# 2:  ( u^n+1 - u^n )/dt        (expl) 
+# 1:  ( u^n+2 - 2*u^n+1 + u^n )/dt        (impl) 
+# 2:  ( u^n+1 - 2*u^n +u^n-1 )/dt        (expl) 
 t_choice = 2 
 
 # space discretization: 
 # du/dx(x_i) =  
-# 1:  ( u_i - u_i-1 )/dx 
-# 2:  ( u_i+1 - u_i )/dx 
-# 3:  ( u_i+1 - u_i-1 )/2dx
-x_choice = 1 
-
-Const_c=1./2
-Const_d=5./3
+# 1:  ( u_i - 2*u_i-1 + u_i-2 )/dx 
+# 2:  ( u_i+1 - 2*u_i + u_i-1 )/dx 
+# 3:  ( u_i+1 - 2*u_i-1 + u_i-3 )/2dx
+x_choice = 2 
 
 implicite = True
 
@@ -90,7 +76,7 @@ if do_movie:
 # spatial domain  and  meshing
 X1_min = 0
 X1_max = 1.0
-Nx1 = 100
+Nx1 = 8
 h1 = 1./Nx1
 X1 = numpy.zeros(Nx1)
 
@@ -111,6 +97,9 @@ PH0 = numpy.zeros(Nx1)
 u1 = numpy.zeros(Nx1)
 next_u1 = numpy.zeros(Nx1)     
 
+
+
+Const_C=-(5./6)*(dt_over_h1*dt_over_h1)
 
 # fonction initiale
 
@@ -134,42 +123,78 @@ for i in range(0,Nx1):
 # assembly of a sparse matrix M using the vector W of the previous time
 
 
-#def constr_matrix_Ai(ielem,const):
-    #assert implicite
-    #row = list()
-    #col = list()
-    #data = list()
-    #coef=const
+def constr_matrix_A():
+    assert implicite
+    row = list()
+    col = list()
+    data = list()
     
-    #row.append((0))
-    #col.append((0))  
-    #data.append(coef*dt_over_h1)   # value of the element
+    row.append((0))
+    col.append((0))  
+    data.append(1-Const_C)   # value of the element
     
-    #for i in range(1,Nx1):
-        ## M_i,i = 0
+    row.append((0))
+    col.append((1))  
+    data.append(Const_C)   # value of the element
     
-        ## M_i,i-1
-        #j = i-1#numpy.mod(i-1,Nx_array[ielem])
-        #row.append((i))
-        #col.append((j))  
-        #data.append( -1*coef*dt_over_h1 )   # value of the element
+    for i in range(1,Nx1-3):
+        # M_i,i = 0
+    
+        # M_i,i-1
+        j = i-1
+        row.append((i))
+        col.append((j))  
+        data.append( Const_C )   # value of the element
 
-        ## M_i,i
-        #j = i#numpy.mod(i+1,Nx_array[ielem])
-        #row.append((i))
-        #col.append((j)) 
-        #data.append( coef*dt_over_h1 )  # value of the element  
-         
-    #row = numpy.array(row)
-    #col = numpy.array(col)
-    #data = numpy.array(data)      
-    #M = (sparse.coo_matrix((data, (row, col)), shape=(Nx1, Nx1))).tocsr()
-    #return M
+        # M_i,i
+        j = i
+        row.append((i))
+        col.append((j)) 
+        data.append( 1-2*Const_C )  # value of the element
+        
+        # M_i,i
+        j = i+1
+        row.append((i))
+        col.append((j)) 
+        data.append( Const_C )  # value of the element  
+    
+    # M_Nx-2,Nx-3
+    row.append((Nx1-3))
+    col.append((Nx1-4)) 
+    data.append(Const_C )  # value of the element
+    
+    # M_Nx-2,Nx-2
+    row.append((Nx1-3))
+    col.append((Nx1-3)) 
+    data.append(Const_C )  # value of the element
+    
+    row = numpy.array(row)
+    col = numpy.array(col)
+    data = numpy.array(data)      
+    M = (sparse.coo_matrix((data, (row, col)), shape=(Nx1-2, Nx1-2))).tocsr()
+    return M
 
-#M=constr_matrix_Ai(0,Const_c);
-##pprint(SparseMatrix(M.todense()))
+
+def constr_vect_B(Pn1,Pn2,nt):
+    assert implicite
+    
+    B = numpy.zeros(Nx1-2)
+    
+    B[0]=2*Pn2[0]-Pn1[0]-2*Const_C*acceleration(nt*dt)# value of the element
+    
+    for i in range(1,Nx1-2):
+        B[i]=2*Pn2[i]-Pn1[i] # value of the element
+    
+    return B
+
+
+
+M=constr_matrix_A();
+pprint(SparseMatrix(M.todense()))
+B=constr_vect_B(numpy.zeros(Nx1-2),numpy.zeros(Nx1-2),2)
+pprint(B)
 #print("detM=",numpy.linalg.det(M.todense()))
-##pprint(Wn)
+#pprint(Wn)
 
 #def assemble_M():
     #assert implicite
@@ -196,37 +221,39 @@ for i in range(0,Nx1):
     ##pprint(SparseMatrix(MB.todense()))
     #return M
 
-##if do_movie:
-    ##ims = []
-    ##print("using imagemagick...")
-    ##Writer = animation.writers['imagemagick']  # ['ffmpeg']
-    ##writer = Writer(fps=15, metadata=dict(artist='Me'), bitrate=1800)
+#if do_movie:
+    #ims = []
+    #print("using imagemagick...")
+    #Writer = animation.writers['imagemagick']  # ['ffmpeg']
+    #writer = Writer(fps=15, metadata=dict(artist='Me'), bitrate=1800)
 
-#fig = plt.figure()
+fig = plt.figure()
 
 
-#def plot_sol(n,ielem):
-    #fig.clf()
-    #fname = dir_name+"out_"+repr(n)+"_u"+str(ielem)+".png"
-    #print("Plot sol in file ", fname, ", nt = ", n, ", min/max = ", min(u1), "/", max(u1))
-    #X_full = numpy.concatenate((X1,[1.]),axis=0)
+def plot_sol(n,ielem):
+    fig.clf()
+    fname = dir_name+"out_"+repr(n)+"_PH"+str(ielem)+".png"
+    print("Plot sol in file ", fname, ", nt = ", n, ", min/max = ", min(u1), "/", max(u1))
+    X_full = numpy.concatenate((X1,[1.]),axis=0)
     #u_full = numpy.concatenate((u1,[u1[0]]),axis=0)
-    #P_full = numpy.concatenate((PH0,[PH0[0]]),axis=0)
-    ## trace aussi les vitesses:
-    ##v = map(vitesse, u)
-    ##v_full = numpy.concatenate((v,[v[0]]),axis=0)
-    #plt.xlim(X1_min, X1_max)
-    ##plt.ylim(Y_min, Y_max)
-    #plt.xlabel('x')
-    #image = (plt.plot(X_full, u_full, '-', color='k'),plt.plot(X_full, P_full, '-', color='r'))
+    P_full = numpy.concatenate((PH0,[PH0[0]]),axis=0)
+    # trace aussi les vitesses:
+    #v = map(vitesse, u)
+    #v_full = numpy.concatenate((v,[v[0]]),axis=0)
+    plt.xlim(X1_min, X1_max)
+    #plt.ylim(Y_min, Y_max)
+    plt.xlabel('x')
+    image = (plt.plot(X_full, P_full, '-', color='r'))#plt.plot(X_full, u_full, '-', color='k'),
     #plt.legend(['u1', 'PH0'], loc='upper left')
-    ##maximage += (plt.plot(X_full, v_full, '-', color='b'))
+    plt.legend(['PH0'], loc='upper left')
+    #maximage += (plt.plot(X_full, v_full, '-', color='b'))
     
-    #fig.savefig(fname)
-    #if do_movie:
-        #ims.append(image)
+    fig.savefig(fname)
+    if do_movie:
+        ims.append(image)
 
-#plot_sol(0,0)
+plot_sol(0,0)
+plot_sol(1,0)
 #U=u1
 #P=PH0
 
