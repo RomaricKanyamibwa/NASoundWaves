@@ -89,7 +89,7 @@ if do_movie:
 
 # spatial domain  and  meshing
 X1_min = 0
-X1_max = 1
+X1_max = 1.0
 Nx1 = 100
 h1 = 1./Nx1
 X1 = numpy.zeros(Nx1)
@@ -218,7 +218,8 @@ def plot_sol(n,ielem):
     plt.xlim(X1_min, X1_max)
     #plt.ylim(Y_min, Y_max)
     plt.xlabel('x')
-    image = (plt.plot(X_full, P_full, '-', color='k'))
+    image = (plt.plot(X_full, u_full, '-', color='k'),plt.plot(X_full, P_full, '-', color='r'))
+    plt.legend(['u1', 'PH0'], loc='upper left')
     #maximage += (plt.plot(X_full, v_full, '-', color='b'))
     
     fig.savefig(fname)
@@ -226,14 +227,15 @@ def plot_sol(n,ielem):
         ims.append(image)
 
 plot_sol(0,0)
+plot_sol(1,0)
 U=u1
 P=PH0
 
-u1[0] = u1_ini(dt)
-u1[1] = -Const_c*dt_over_h1*(-2*h1*acceleration(dt))
+u1[0] = u1_ini(2*dt)
+u1[1] = -Const_c*dt_over_h1*(-2*h1*acceleration(2*dt))
 PH0[1]= -Const_d*dt_over_h1*(u1[1]-u1[0])
 #print(u1[0],u1[1],PH0[1])
-PH0[0]= PH0[1] + 2*h1*acceleration(dt)
+PH0[0]= PH0[1] + 2*h1*acceleration(2*dt)
 #print("PH0=",PH0[0])
 um=u1[1]
 pm0=PH0[1]
@@ -253,11 +255,12 @@ for i in range(2,Nx1):
     #pm0=pm
     #print(i,"form:",um)
     #print(i,"form:",pm)
-    print("X=",x)
+    #print("X=",x)
 
 u1[Nx1-1] = 0    
-print("u1=",u1)
-print("PH0=",PH0)
+PH0[Nx1-1] = PH0[Nx1-2]
+#print("u1=",u1)
+#print("PH0=",PH0)
 plot_sol(1,0)
 U=numpy.vstack((U,u1))
 P=numpy.vstack((P,PH0))
@@ -271,7 +274,7 @@ M = assemble_M()
 #print("-------------------------------------------------------")
 
 # schema numerique       
-for nt in range(1,Nt):               
+for nt in range(2,Nt):               
     if implicite:
         #print("Implicit Scheme")
         next_Wn[:] = sparse.linalg.spsolve(M, Wn)
@@ -290,6 +293,7 @@ for nt in range(1,Nt):
     u1[:] = Wn[0:Nx]
     PH0[:] = Wn[Nx:2*Nx]
     PH0[0]= PH0[1] + 2*h1*acceleration((nt+1)*dt)
+    PH0[Nx-1]=PH0[Nx-2]
     #pprint(Wn)
     #U=numpy.vstack((U,u1))
     #P=numpy.vstack((P,PH0))
