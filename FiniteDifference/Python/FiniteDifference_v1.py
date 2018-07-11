@@ -76,7 +76,7 @@ if do_movie:
 # spatial domain  and  meshing
 X1_min = 0
 X1_max = 1.0
-Nx1 = 8
+Nx1 = 500
 h1 = 1./Nx1
 X1 = numpy.zeros(Nx1)
 
@@ -93,6 +93,8 @@ periode_images = int(Nt*1./n_images)
 
 # Pressure and Numerical solution (approx sol)
 PH0 = numpy.zeros(Nx1)
+before_PH0 = numpy.zeros(Nx1)
+next_PH0 = numpy.zeros(Nx1)
 
 u1 = numpy.zeros(Nx1)
 next_u1 = numpy.zeros(Nx1)     
@@ -166,7 +168,7 @@ def constr_matrix_A():
     # M_Nx-2,Nx-2
     row.append((Nx1-3))
     col.append((Nx1-3)) 
-    data.append(Const_C )  # value of the element
+    data.append(1-Const_C )  # value of the element
     
     row = numpy.array(row)
     col = numpy.array(col)
@@ -189,10 +191,10 @@ def constr_vect_B(Pn1,Pn2,nt):
 
 
 
-M=constr_matrix_A();
-pprint(SparseMatrix(M.todense()))
-B=constr_vect_B(numpy.zeros(Nx1-2),numpy.zeros(Nx1-2),2)
-pprint(B)
+#M=constr_matrix_A();
+#pprint(SparseMatrix(M.todense()))
+#B=constr_vect_B(numpy.zeros(Nx1-2),numpy.zeros(Nx1-2),2)
+#pprint(B)
 #print("detM=",numpy.linalg.det(M.todense()))
 #pprint(Wn)
 
@@ -233,7 +235,7 @@ fig = plt.figure()
 def plot_sol(n,ielem):
     fig.clf()
     fname = dir_name+"out_"+repr(n)+"_PH"+str(ielem)+".png"
-    print("Plot sol in file ", fname, ", nt = ", n, ", min/max = ", min(u1), "/", max(u1))
+    print("Plot sol in file ", fname, ", nt = ", n, ", min/max = ", min(PH0), "/", max(PH0))
     X_full = numpy.concatenate((X1,[1.]),axis=0)
     #u_full = numpy.concatenate((u1,[u1[0]]),axis=0)
     P_full = numpy.concatenate((PH0,[PH0[0]]),axis=0)
@@ -290,42 +292,33 @@ plot_sol(1,0)
 #plot_sol(1,0)
 #U=numpy.vstack((U,u1))
 #P=numpy.vstack((P,PH0))
-#Wn=numpy.hstack((u1,PH0))
-#next_Wn = numpy.zeros(2*Nx1)
-#old_Wn = numpy.zeros(2*Nx1)
-#M = assemble_M()
+M = constr_matrix_A()
 ##print("-------------------------------------------------------")
 ##pprint(SparseMatrix(Wn))
 ##pprint(M.todense())
 ##print("-------------------------------------------------------")
 
-## schema numerique       
-#for nt in range(1,Nt):               
-    #if implicite:
-        ##print("Implicit Scheme")
-        #next_Wn[:] = sparse.linalg.spsolve(M, Wn)
+# schema numerique       
+for nt in range(1,Nt):               
+    if implicite:
+        #print("Implicit Scheme")
+        B = constr_vect_B(before_PH0,PH0,2)
+        next_PH0[1:Nx1-1] = sparse.linalg.spsolve(M, B)
+        next_PH0[0]= next_PH0[1] + 2*h1*acceleration((nt+1)*dt)
+        next_PH0[Nx1-1]=next_PH0[Nx1-2]
 
-    #else:
-        #print("ERROR")
-        #exit()
-        ##for i in range(0,Nx1):        
-            ##next_u[i] =-dt_over_h*(flux(u[i])-flux(u[i-1]))+u[i]   # ecrire ici le schema explicite
+    else:
+        print("ERROR")
+        exit()
+        #for i in range(0,Nx1):        
+            #next_u[i] =-dt_over_h*(flux(u[i])-flux(u[i-1]))+u[i]   # ecrire ici le schema explicite
             
-    #Nx=Nx1
-    #old_Wn[:]=Wn
-    #Wn[:] = next_Wn[:]
-    #Wn[0]= u1_ini((nt+1)*dt)
-    #Wn[Nx-1]=0
-    #u1[:] = Wn[0:Nx]
-    #PH0[:] = Wn[Nx:2*Nx]
-    #PH0[0]= PH0[1] + 2*h1*acceleration((nt+1)*dt)
-    #PH0[Nx-1]=PH0[Nx-2]
-    ##pprint(Wn)
-    ##U=numpy.vstack((U,u1))
-    ##P=numpy.vstack((P,PH0))
+    before_PH0[:]=PH0[:]
+    PH0[:] = next_PH0[:]
+    
 
-    #if (nt+1)%periode_images == 0 or (nt+1) == Nt:
-        #plot_sol(nt+1,0)
+    if (nt+1)%periode_images == 0 or (nt+1) == Nt:
+        plot_sol(nt+1,0)
     
 
 #if do_movie:
