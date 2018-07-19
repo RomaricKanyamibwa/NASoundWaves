@@ -11,7 +11,7 @@ Test of Finite Difference Numerical Schemes on sound waves equations
 """
 
 #############################################################################
-#  Copyright (Const_c) 2017                                                       #
+#  Copyright (Const_c) 2017                                                 #
 #                                                                           #
 #                                                                           #
 #  Distributed under the terms of the GNU General Public License (GPL)      #
@@ -36,17 +36,9 @@ from sympy.matrices import SparseMatrix
 
 ### We want to resolve numericaly the following PDE
 #
-# d_t u1 + 1/2 * d_x1 PH0 = 0
-# d_t PH0 + 5/3 * dj_x1 u1 = 0
+# d_tt PH0 - 5.0/6 * d_xx PH0 = 0
 #
-# dx2=0 and dx3=0
-# with u the velocity and P the pressure
-
-## vitesse max km/h
-#v_max = 130
-
-## densite max (nb de voitures/km)
-#u_max = 200
+# with P the pressure
 
 
 # time discretization: 
@@ -75,29 +67,29 @@ if do_movie:
 
 # spatial domain  and  meshing
 X1_min = 0
-X1_max = 1.0
-Nx1 = 500
-h1 = 1./Nx1
-X1 = numpy.zeros(Nx1)
+X1_max = 100.0
+Nx1 = 1000
+h1 = 1./Nx1*(X1_max-X1_min)
+X1 = numpy.zeros(Nx1+1)
 
 
 # temporal domain
-Temps_final = 1.#/60
-Nt = 500
+Temps_final = 200*numpy.pi
+Nt = 1000
 dt = Temps_final * 1./Nt
 dt_over_h1 = dt/h1
 
 # approximate number of images generated
-n_images = 100
+n_images = 200
 periode_images = int(Nt*1./n_images)
 
 # Pressure and Numerical solution (approx sol)
-PH0 = numpy.zeros(Nx1)
-before_PH0 = numpy.zeros(Nx1)
-next_PH0 = numpy.zeros(Nx1)
+PH0 = numpy.zeros(Nx1+1)
+before_PH0 = numpy.zeros(Nx1+1)
+next_PH0 = numpy.zeros(Nx1+1)
 
-u1 = numpy.zeros(Nx1)
-next_u1 = numpy.zeros(Nx1)     
+u1 = numpy.zeros(Nx1-1)
+next_u1 = numpy.zeros(Nx1-1)     
 
 
 
@@ -115,8 +107,8 @@ def u1_ini(t):
 def acceleration(t):
     return -numpy.cos(t)+(1-t)*numpy.exp(-t)
 
-for i in range(0,Nx1):
-    X1[i] = X1_min + i*h1*(X1_max-X1_min)
+for i in range(0,Nx1+1):
+    X1[i] = X1_min + i*h1#*(X1_max-X1_min)
 
 # pour la visu:
 #Y_min = 0
@@ -139,7 +131,7 @@ def constr_matrix_A():
     col.append((1))  
     data.append(Const_C)   # value of the element
     
-    for i in range(1,Nx1-3):
+    for i in range(1,Nx1-2):
         # M_i,i = 0
     
         # M_i,i-1
@@ -161,30 +153,30 @@ def constr_matrix_A():
         data.append( Const_C )  # value of the element  
     
     # M_Nx-2,Nx-3
-    row.append((Nx1-3))
-    col.append((Nx1-4)) 
+    row.append((Nx1-2))
+    col.append((Nx1-3)) 
     data.append(Const_C )  # value of the element
     
     # M_Nx-2,Nx-2
-    row.append((Nx1-3))
-    col.append((Nx1-3)) 
+    row.append((Nx1-2))
+    col.append((Nx1-2)) 
     data.append(1-Const_C )  # value of the element
     
     row = numpy.array(row)
     col = numpy.array(col)
     data = numpy.array(data)      
-    M = (sparse.coo_matrix((data, (row, col)), shape=(Nx1-2, Nx1-2))).tocsr()
+    M = (sparse.coo_matrix((data, (row, col)), shape=(Nx1-1, Nx1-1))).tocsr()
     return M
 
 
 def constr_vect_B(Pn1,Pn2,nt):
     assert implicite
     
-    B = numpy.zeros(Nx1-2)
+    B = numpy.zeros(Nx1-1)
     
-    B[0]=2*Pn2[0]-Pn1[0]-2*Const_C*acceleration(nt*dt)# value of the element
+    B[0]=2*Pn2[0]-Pn1[0]-2*Const_C*h1*acceleration(nt*dt)# value of the element
     
-    for i in range(1,Nx1-2):
+    for i in range(1,Nx1-1):
         B[i]=2*Pn2[i]-Pn1[i] # value of the element
     
     return B
@@ -198,30 +190,6 @@ def constr_vect_B(Pn1,Pn2,nt):
 #print("detM=",numpy.linalg.det(M.todense()))
 #pprint(Wn)
 
-#def assemble_M():
-    #assert implicite
-    #A1=constr_matrix_Ai(0,Const_c)
-    #A1_d=constr_matrix_Ai(0,Const_d)
-    
-    #I=sparse.identity(Nx1);
-    #I=sparse.coo_matrix(I)
-
-    
-    ##pprint(SparseMatrix(A1.todense()))
-    ##pprint(SparseMatrix(B1.todense()))
-    
-    #M1=numpy.hstack((I.todense(),A1.todense()))
-    
-    #M2=numpy.hstack((A1_d.todense(),I.todense()))
-    
-    #M=numpy.vstack((M1,M2))
-    #M=sparse.coo_matrix(M)
-    ##pprint(M)
-    ##print(numpy.linalg.det(M.todense()))
-    ##print(numpy.linalg.det(MB.todense()))
-    ##pprint(SparseMatrix(M.todense()))
-    ##pprint(SparseMatrix(MB.todense()))
-    #return M
 
 #if do_movie:
     #ims = []
@@ -236,16 +204,16 @@ def plot_sol(n,ielem):
     fig.clf()
     fname = dir_name+"out_"+repr(n)+"_PH"+str(ielem)+".png"
     print("Plot sol in file ", fname, ", nt = ", n, ", min/max = ", min(PH0), "/", max(PH0))
-    X_full = numpy.concatenate((X1,[1.]),axis=0)
+    X_full = numpy.concatenate((X1,[X1[-1]]),axis=0)
     #u_full = numpy.concatenate((u1,[u1[0]]),axis=0)
     P_full = numpy.concatenate((PH0,[PH0[0]]),axis=0)
     # trace aussi les vitesses:
     #v = map(vitesse, u)
     #v_full = numpy.concatenate((v,[v[0]]),axis=0)
-    plt.xlim(X1_min, X1_max)
-    #plt.ylim(Y_min, Y_max)
-    plt.xlabel('x')
-    image = (plt.plot(X_full, P_full, '-', color='r'))#plt.plot(X_full, u_full, '-', color='k'),
+    #plt.xlim(X1_min, X1_max)
+    plt.ylim(-5, 5)
+    #plt.xlabel('x')
+    image = (plt.plot(X1, PH0, '-', color='r'))#plt.plot(X_full, u_full, '-', color='k'),
     #plt.legend(['u1', 'PH0'], loc='upper left')
     plt.legend(['PH0'], loc='upper left')
     #maximage += (plt.plot(X_full, v_full, '-', color='b'))
@@ -256,56 +224,22 @@ def plot_sol(n,ielem):
 
 plot_sol(0,0)
 plot_sol(1,0)
-#U=u1
-#P=PH0
 
-#u1[0] = u1_ini(dt)
-#u1[1] = -Const_c*dt_over_h1*(-2*h1*acceleration(dt))
-#PH0[1]= -Const_d*dt_over_h1*(u1[1]-u1[0])
-##print(u1[0],u1[1],PH0[1])
-#PH0[0]= PH0[1] + 2*h1*acceleration(dt)
-##print("PH0=",PH0[0])
-#um=u1[1]
-#pm0=PH0[1]
-
-#for i in range(2,Nx1):
-    #a = numpy.array([[1,Const_c*dt_over_h1], [Const_d*dt_over_h1,1]])
-    #b = numpy.array([0+Const_c*dt_over_h1*PH0[i-1],Const_d*dt_over_h1*u1[i-1]])
-    #x = numpy.linalg.solve(a, b)
-    
-    #u1[i] = x[0]
-    #PH0[i]= x[1]
-    ##print("______________________________________________")
-    ##print(i,"linalg:",u1[i])
-    ##print(i,"linalg:",PH0[i])
-    ##pm=Const_d*dt_over_h1*(um-Const_c*dt_over_h1*pm0)/(1-Const_d*dt_over_h1*Const_c*dt_over_h1)
-    ##um=Const_c*dt_over_h1*(pm0-pm)
-    ##pm0=pm
-    ##print(i,"form:",um)
-    ##print(i,"form:",pm)
-    ##print("X=",x)
-
-#u1[Nx1-1] = 0    
-#PH0[Nx1-1] = PH0[Nx1-2]
-##print("u1=",u1)
-##print("PH0=",PH0)
-#plot_sol(1,0)
-#U=numpy.vstack((U,u1))
-#P=numpy.vstack((P,PH0))
 M = constr_matrix_A()
-##print("-------------------------------------------------------")
-##pprint(SparseMatrix(Wn))
-##pprint(M.todense())
-##print("-------------------------------------------------------")
+#print("-------------------------------------------------------")
+###pprint(SparseMatrix(Wn))
+#pprint(M.todense())
+#print("-------------------------------------------------------")
 
 # schema numerique       
 for nt in range(1,Nt):               
     if implicite:
         #print("Implicit Scheme")
-        B = constr_vect_B(before_PH0,PH0,2)
-        next_PH0[1:Nx1-1] = sparse.linalg.spsolve(M, B)
+        B = constr_vect_B(before_PH0[1:Nx1],PH0[1:Nx1],nt+1)
+        #pprint(SparseMatrix(B))
+        next_PH0[1:Nx1] = sparse.linalg.spsolve(M, B)
         next_PH0[0]= next_PH0[1] + 2*h1*acceleration((nt+1)*dt)
-        next_PH0[Nx1-1]=next_PH0[Nx1-2]
+        next_PH0[Nx1]=next_PH0[Nx1-1]
 
     else:
         print("ERROR")
