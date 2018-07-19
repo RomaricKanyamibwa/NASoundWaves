@@ -211,7 +211,7 @@ def plot_sol(n,ielem):
     #v = map(vitesse, u)
     #v_full = numpy.concatenate((v,[v[0]]),axis=0)
     #plt.xlim(X1_min, X1_max)
-    plt.ylim(-5, 5)
+    plt.ylim(-8, 8)
     #plt.xlabel('x')
     image = (plt.plot(X1, PH0, '-', color='r'))#plt.plot(X_full, u_full, '-', color='k'),
     #plt.legend(['u1', 'PH0'], loc='upper left')
