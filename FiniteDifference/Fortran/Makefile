@@ -1,5 +1,4 @@
-CXX=gfortran -O3 -fimplicit-none -fopenmp
-#-Werror -Wall -O3  
+CXX=gfortran -O3 -fimplicit-none -fopenmp -Werror -Wall -O3  
 #-ffast-math -ftree-vectorize -march=native -funroll-loops
 
 FLAGS=-Iinc -g
@@ -20,8 +19,6 @@ $(BIN) : $(addprefix obj/, $(OBJECTS))
 obj/%.o : src/%.f90
 	$(CXX) -c -o $@ $^ $(FLAGS)
 
-#obj/%.o : src/%.c
-#	$(CXX) -c -o $@ $^ $(FLAGS)
 
 clean :
 	rm -f bin/* obj/*

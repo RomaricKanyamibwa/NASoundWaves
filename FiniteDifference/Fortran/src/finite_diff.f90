@@ -61,11 +61,16 @@ END INTERFACE
 
     ! type declaration statements
     integer::Nx,Nt,error!,n_images,image_periode
-    integer::i,j
+    integer::i,nt_i,n_images=100,periode_images
     double precision ::PI=4.D0*DATAN(1.D0) ,acc,acceleration
     double precision :: X_min,X_max,dx,Final_time,dt,dt_over_dx,Const_C
     double precision, allocatable :: X(:),PH0(:),next_PH0(:),before_PH0(:)
     double precision, allocatable :: Ainv(:,:)
+    double precision :: alpha, beta
+    
+    
+    ! External procedures defined in BLAS
+    external DGEMV
 
 !     time discretization: 
 !     du/dt(t^n) =  
@@ -82,15 +87,17 @@ END INTERFACE
 !     call omp_set_num_threads(4)
 !     print *,"Num_thds=", omp_get_num_threads()
 
+    alpha=1.d0; beta=0.d0
     dir_name = 'simu_impliciteV1/'    
     ! spatial domain and mesh
     X_min = 0.0
-    X_max = 5.0
-    Nx=8
-    dx = 1.0/Nx*(X_max-X_min)
+    X_max = 100.0
+    Nx=1000
+    dx = (X_max-X_min)*1.0/Nx
     Nt = 1000
-    dt = Final_time * 1./Nt
-    dt_over_dx = dt/dx
+    
+    !number of images generated
+    periode_images = int(Nt*1./n_images)
 
     ! temporal domain
     Final_time = 200*PI! t in [0,Final_time]
@@ -99,7 +106,7 @@ END INTERFACE
     Const_C=-(5./6)*(dt_over_dx*dt_over_dx)
     
 
-    allocate(X(Nx+2),before_PH0(Nx+2),PH0(Nx+2),next_PH0(Nx+2),stat=error)
+    allocate(X(Nx+1),before_PH0(Nx+1),PH0(Nx+1),next_PH0(Nx+1),stat=error)
     if (error.ne.0) then
         print*,'error: could not allocate memory for array X or PH0 or next or before or B, Nx+1=',Nx+1
         stop
@@ -113,42 +120,74 @@ END INTERFACE
 !     print*,"Some results Nx",Nx
     
 
-    acc=acceleration (dt)
 
     !$OMP PARALLEL DO 
-    do i=1,Nx+2
-        X(i) = X_min + i*dx
+    do i=1,Nx+1
+        X(i) = X_min + (i-1)*dx
     end do
     !$OMP END PARALLEL DO 
     
     CALL constr_matrix_A(Nx,Const_C)
-    
-    do i=1,Nx
-        print*,real( A(i,:) ) 
-    end do
-    
-    CALL constr_vect_B(Const_C,dt,dx,acc,Nx,nt,before_PH0(2:Nx+1),PH0(2:Nx+1))
-    
-    print*,"B vector"
-    do i=1,Nx
-        print*,real( b(i) ) 
-    end do
-    
     CALL plot_sol(Nx,0,PH0,X)
     CALL plot_sol(Nx,1,PH0,X)
     
-    allocate(Ainv(Nx,Nx),stat=error)
+!     do i=1,Nx-1
+!         print*,real( A(i,:) ) 
+!     end do
+    
+    allocate(B(Nx-1),Ainv(Nx-1,Nx-1),stat=error)
     if (error.ne.0) then
-        print*,'error: could not allocate memory for array A, Nx=',Nx
+        print*,'error: could not allocate memory for vector B, Nx=',Nx
         stop
     endif
     
-    Ainv=inv(A)
-    print*,"Ainv"
-    do i=1,Nx
-        print*,real( Ainv(i,:) ) 
+    do nt_i=2,Nt
+        print*,"----------------Nt=",nt_i,"----------------"
+        acc=acceleration (nt_i*dt)
+        CALL constr_vect_B(Const_C,dx,acc,Nx,before_PH0(2:Nx),PH0(2:Nx))
+        
+!         print*,"B vector"
+!         do i=1,Nx-1
+!             print*,real( B(i) ) 
+!         end do
+        
+        Ainv=inv(A)
+!         print*,"Ainv"
+!         do i=1,Nx-1
+!             print*,real( Ainv(i,:) ) 
+!         end do
+        
+        CALL DGEMV('N',size(A,1),size(A,2),alpha,Ainv,size(A,2),B,1,beta,next_PH0(2:Nx),1)
+        
+        next_PH0(1)= next_PH0(2) + 2*dx*acc
+        next_PH0(Nx+1)=next_PH0(Nx)
+        
+    !     print*,"Next PH0"
+    !     do i=1,Nx+1
+    !         print*,real( next_PH0(i) ) 
+    !     end do
+    !     
+    !     print*,"PH0"
+    !     do i=1,Nx+1
+    !         print*,real( PH0(i) ) 
+    !     end do
+        before_PH0(:)=PH0(:)
+        PH0(:)=next_PH0(:)
+        
+        if ( (MOD((nt_i),periode_images) == 0) .OR. ((nt_i) == Nt) ) then
+            CALL plot_sol(Nx,nt_i,PH0,X)
+        endif
+        
+    !     print*,"after aff PH0"
+    !     do i=1,Nx+1
+    !         print*,real( PH0(i) ) 
+    !     end do
+    !     
+    !     print*,"before PH0"
+    !     do i=1,Nx+1
+    !         print*,real( before_PH0(i) ) 
+    !     end do
     end do
-    
     !-------------------END OF program-------------------
     
     ! deallocation and end of program
@@ -157,7 +196,7 @@ END INTERFACE
         print*,'error in deallocating array'
     endif
     
-    deallocate(A,stat=error)
+    deallocate(A,Ainv,B,stat=error)
     if (error.ne.0) then
         print*,'error in deallocating array'
     endif
@@ -185,7 +224,7 @@ implicit none
     integer ::i,error
 !     double precision ,allocatable ,Intent(OUT) :: A(:,:)
     
-    allocate(A(Nx,Nx),stat=error)
+    allocate(A(Nx-1,Nx-1),stat=error)
     if (error.ne.0) then
         print*,'error: could not allocate memory for array A, Nx=',Nx
         stop
@@ -195,36 +234,30 @@ implicit none
     A(1,2)=Const_C
     
     !$OMP PARALLEL DO 
-    do i=2,Nx-1
+    do i=2,Nx-2
         A(i,i-1)=Const_C
         A(i,i)=1-2*Const_C
         A(i,i+1)=Const_C
     enddo
     !$OMP END PARALLEL DO
     
-    A(Nx,Nx-1)=Const_c
-    A(Nx,Nx)=1-Const_C
+    A(Nx-1,Nx-2)=Const_c
+    A(Nx-1,Nx-1)=1-Const_C
 
 end subroutine constr_matrix_A
 
-subroutine constr_vect_B(Const_C,dt,dx,acc,Nx,nt,Pn1,Pn2)
+subroutine constr_vect_B(Const_C,dx,acc,Nx,Pn1,Pn2)
 use Global_Var
 implicit none
 
-    double precision,Intent(IN):: Const_C,dt,dx,acc
-    integer,Intent(IN)::Nx,nt
-    double precision,Intent(IN)::Pn1(Nx),Pn2(Nx)
-    integer ::i,error
-
-    allocate(B(Nx),stat=error)
-    if (error.ne.0) then
-        print*,'error: could not allocate memory for vector B, Nx=',Nx
-        stop
-    endif
+    double precision,Intent(IN):: Const_C,dx,acc
+    integer,Intent(IN)::Nx
+    double precision,Intent(IN)::Pn1(Nx-1),Pn2(Nx-1)
+    integer ::i
     
     B(1)=2*Pn2(1)-Pn1(1)-2*Const_C*dx*acc
     !$OMP PARALLEL DO 
-    do i=2,Nx
+    do i=2,Nx-1
         B(i)=2*Pn2(i)-Pn1(i)
     enddo
     !$OMP END PARALLEL DO
@@ -234,10 +267,11 @@ end subroutine constr_vect_B
 subroutine plot_sol(Nx,n,PH0,X)
 use Global_Var
 implicit none
-    double precision,Intent(IN)::PH0(Nx+2),X(Nx+2)
+    double precision,Intent(IN)::PH0(Nx+1),X(Nx+1)
     integer,Intent(In)::n,Nx
-    character(len=100)::fname,tmpstr='',out='out',strn
+    character(len=100)::fname,tmpstr='',strn
     logical :: exist
+    integer :: i
 
     write (tmpstr,*) trim("out"),n
     write (strn,*)n
@@ -255,9 +289,10 @@ implicit none
     else
         open(1, file = fname, status='new')
     endif   
-    write(1,*)PH0(:)
-    write(1,*)""
-    write(1,*)X(:)
+    
+    do i=1,Nx+1
+        write(1,*)X(i)," ",PH0(i)
+    enddo
     
     print*,"Plot sol in file ",trim(fname),trim(", nt = "),trim(strn),trim(", min/max = "), minval(PH0),trim("/"), maxval(PH0)
     

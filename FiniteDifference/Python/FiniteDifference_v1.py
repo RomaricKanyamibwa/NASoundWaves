@@ -69,7 +69,7 @@ if do_movie:
 X1_min = 0
 X1_max = 100.0
 Nx1 = 1000
-h1 = 1./Nx1*(X1_max-X1_min)
+h1 = (X1_max-X1_min)*1./Nx1
 X1 = numpy.zeros(Nx1+1)
 
 
@@ -185,8 +185,10 @@ def constr_vect_B(Pn1,Pn2,nt):
 
 #M=constr_matrix_A();
 #pprint(SparseMatrix(M.todense()))
-#B=constr_vect_B(numpy.zeros(Nx1-2),numpy.zeros(Nx1-2),2)
+#pprint(SparseMatrix(M.todense()).inv())
+#B=constr_vect_B(before_PH0,PH0,2)
 #pprint(B)
+#pprint(SparseMatrix(M.todense()).inv()*SparseMatrix(B))
 #print("detM=",numpy.linalg.det(M.todense()))
 #pprint(Wn)
 
@@ -252,6 +254,8 @@ for nt in range(1,Nt):
     
 
     if (nt+1)%periode_images == 0 or (nt+1) == Nt:
+        #print("Nt=",nt+1)
+        #pprint(PH0)
         plot_sol(nt+1,0)
     
 
