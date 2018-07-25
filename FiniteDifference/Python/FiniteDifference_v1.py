@@ -80,7 +80,7 @@ dt = Temps_final * 1./Nt
 dt_over_h1 = dt/h1
 
 # approximate number of images generated
-n_images = 200
+n_images = 16
 periode_images = int(Nt*1./n_images)
 
 # Pressure and Numerical solution (approx sol)
@@ -88,8 +88,8 @@ PH0 = numpy.zeros(Nx1+1)
 before_PH0 = numpy.zeros(Nx1+1)
 next_PH0 = numpy.zeros(Nx1+1)
 
-u1 = numpy.zeros(Nx1-1)
-next_u1 = numpy.zeros(Nx1-1)     
+#u1 = numpy.zeros(Nx1-1)
+#next_u1 = numpy.zeros(Nx1-1)     
 
 
 
@@ -204,7 +204,12 @@ fig = plt.figure()
 
 def plot_sol(n,ielem):
     fig.clf()
-    fname = dir_name+"out_"+repr(n)+"_PH"+str(ielem)+".png"
+    fname = dir_name+"out"+repr(n)+"_PH"+str(ielem)+".png"
+    fname2 = dir_name+"out"+repr(n)+"_PH"+str(ielem)+".dat"
+    f= open(fname2,"w+")
+    for i in range(Nx1+1):
+        str1=str(X1[i])+"\t"+str(PH0[i])+"\n"
+        f.write(str1)
     print("Plot sol in file ", fname, ", nt = ", n, ", min/max = ", min(PH0), "/", max(PH0))
     X_full = numpy.concatenate((X1,[X1[-1]]),axis=0)
     #u_full = numpy.concatenate((u1,[u1[0]]),axis=0)

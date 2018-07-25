@@ -34,12 +34,12 @@ module Global_Var
             do
                 stride = scan( string( old : ), set )
                 if ( stride > 0 ) then
-                string( new : new+stride-2 ) = string( old : old+stride-2 )
-                old = old+stride
-                new = new+stride-1
+                    string( new : new+stride-2 ) = string( old : old+stride-2 )
+                    old = old+stride
+                    new = new+stride-1
                 else
-                string( new : ) = string( old : )
-                return
+                    string( new : ) = string( old : )
+                    return
                 end if
             end do
         end subroutine strip
@@ -57,17 +57,30 @@ INTERFACE
         double precision, dimension(:,:), intent(in) :: A
         double precision, dimension(size(A,1),size(A,2)) :: Ainv
     END FUNCTION inv
+    
+    function velocity (t) result(V)
+        double precision,Intent(in):: t
+        double precision ::V
+    end function velocity
+    
+    function acceleration (t) result(accel)
+        double precision,Intent(in):: t
+        double precision ::accel
+    end function acceleration
+    
 END INTERFACE
 
     ! type declaration statements
     integer::Nx,Nt,error!,n_images,image_periode
-    integer::i,nt_i,n_images=100,periode_images
-    double precision ::PI=4.D0*DATAN(1.D0) ,acc,acceleration
+    integer::i,nt_i,n_images=1000,periode_images
+    double precision ::PI=4.D0*DATAN(1.D0) ,acc
     double precision :: X_min,X_max,dx,Final_time,dt,dt_over_dx,Const_C
     double precision, allocatable :: X(:),PH0(:),next_PH0(:),before_PH0(:)
-    double precision, allocatable :: Ainv(:,:)
+    double precision, allocatable :: Ainv(:,:),UH0(:),next_UH0(:)
     double precision :: alpha, beta
-    
+    double precision :: start, finish
+    logical :: exist
+    character(len=20)::fname="time_file.txt"
     
     ! External procedures defined in BLAS
     external DGEMV
@@ -92,7 +105,7 @@ END INTERFACE
     ! spatial domain and mesh
     X_min = 0.0
     X_max = 100.0
-    Nx=1000
+    Nx= 1000
     dx = (X_max-X_min)*1.0/Nx
     Nt = 1000
     
@@ -102,11 +115,12 @@ END INTERFACE
     ! temporal domain
     Final_time = 200*PI! t in [0,Final_time]
     dt =  Final_time * 1./Nt
-    dt_over_dx = 1.0*dt/dx
+    dt_over_dx = (1.0*dt)/dx
     Const_C=-(5./6)*(dt_over_dx*dt_over_dx)
     
-
-    allocate(X(Nx+1),before_PH0(Nx+1),PH0(Nx+1),next_PH0(Nx+1),stat=error)
+    CALL cpu_time(start)
+    
+    allocate(X(Nx+1),before_PH0(Nx+1),PH0(Nx+1),next_PH0(Nx+1),UH0(Nx+1),next_UH0(Nx+1),stat=error)
     if (error.ne.0) then
         print*,'error: could not allocate memory for array X or PH0 or next or before or B, Nx+1=',Nx+1
         stop
@@ -115,6 +129,9 @@ END INTERFACE
     PH0(:)=0.0
     next_PH0(:)=0.0
     before_PH0(:)=0.0
+    UH0(:)=0.0
+    next_UH0(:)=0.0
+    
 !     executable statements  
 !     print*,"Some results Nt",Nt
 !     print*,"Some results Nx",Nx
@@ -128,8 +145,8 @@ END INTERFACE
     !$OMP END PARALLEL DO 
     
     CALL constr_matrix_A(Nx,Const_C)
-    CALL plot_sol(Nx,0,PH0,X)
-    CALL plot_sol(Nx,1,PH0,X)
+    CALL plot_sol(Nx,0,PH0,UH0,X)
+    CALL plot_sol(Nx,1,PH0,UH0,X)
     
 !     do i=1,Nx-1
 !         print*,real( A(i,:) ) 
@@ -141,8 +158,9 @@ END INTERFACE
         stop
     endif
     
+    Ainv=inv(A)
     do nt_i=2,Nt
-        print*,"----------------Nt=",nt_i,"----------------"
+!         print*,"----------------Nt=",nt_i,"----------------"
         acc=acceleration (nt_i*dt)
         CALL constr_vect_B(Const_C,dx,acc,Nx,before_PH0(2:Nx),PH0(2:Nx))
         
@@ -150,8 +168,6 @@ END INTERFACE
 !         do i=1,Nx-1
 !             print*,real( B(i) ) 
 !         end do
-        
-        Ainv=inv(A)
 !         print*,"Ainv"
 !         do i=1,Nx-1
 !             print*,real( Ainv(i,:) ) 
@@ -161,6 +177,10 @@ END INTERFACE
         
         next_PH0(1)= next_PH0(2) + 2*dx*acc
         next_PH0(Nx+1)=next_PH0(Nx)
+        
+        next_UH0(1)=velocity(nt_i*dt)
+        next_UH0(Nx+1)=0.0
+        next_UH0(2:Nx)=UH0(2:Nx)-1.0/2.0*dt_over_dx*(next_PH0(2:Nx)-next_PH0(1:Nx-1))
         
     !     print*,"Next PH0"
     !     do i=1,Nx+1
@@ -173,9 +193,10 @@ END INTERFACE
     !     end do
         before_PH0(:)=PH0(:)
         PH0(:)=next_PH0(:)
+        UH0(:)=next_UH0(:)
         
         if ( (MOD((nt_i),periode_images) == 0) .OR. ((nt_i) == Nt) ) then
-            CALL plot_sol(Nx,nt_i,PH0,X)
+            CALL plot_sol(Nx,nt_i,PH0,UH0,X)
         endif
         
     !     print*,"after aff PH0"
@@ -188,6 +209,21 @@ END INTERFACE
     !         print*,real( before_PH0(i) ) 
     !     end do
     end do
+    
+    CALL cpu_time(finish)
+    inquire(file=fname, exist=exist)
+    
+    if (exist) then
+        open(125, file = fname, status='old',position="append")
+    else
+        open(125, file = fname, status='new')
+    endif   
+    write(125,*)'********************************************************'
+    write(125,"(A,I6,A,I6)")'Nx=',Nx,',Nt=',Nt
+    write(125,*)'Time = ",',finish-start,'," seconds.'
+    write(125,*)'********************************************************'
+    write(125,*)''
+    close(125)
     !-------------------END OF program-------------------
     
     ! deallocation and end of program
@@ -204,16 +240,24 @@ END INTERFACE
 end program finite_diff
 
 
-function acceleration (t)
+function acceleration (t) result(accel)
 implicit none
     
+    double precision,Intent(in):: t
+    double precision ::accel
     
-    double precision::acceleration
-    double precision :: t
-    
-    acceleration=-cos(t)+(1-t)*exp(-t)
+    accel=-cos(t)+(1-t)*exp(-t)
 
 end function acceleration
+
+
+function velocity (t) result(V)
+    implicit none
+    double precision,Intent(in):: t
+    double precision ::V
+    
+    V=-sin(t)+(t)*exp(-t)
+end function velocity
 
 subroutine constr_matrix_A(Nx,Const_C)
 use Global_Var
@@ -264,10 +308,10 @@ implicit none
     
 end subroutine constr_vect_B
 
-subroutine plot_sol(Nx,n,PH0,X)
+subroutine plot_sol(Nx,n,PH0,UH0,X)
 use Global_Var
 implicit none
-    double precision,Intent(IN)::PH0(Nx+1),X(Nx+1)
+    double precision,Intent(IN)::PH0(Nx+1),UH0(Nx+1),X(Nx+1)
     integer,Intent(In)::n,Nx
     character(len=100)::fname,tmpstr='',strn
     logical :: exist
@@ -280,7 +324,7 @@ implicit none
     CALL strip(tmpstr,' ')
 !     write(*,*)trim(tmpstr),"hahah"
     fname=trim(fname)//trim(tmpstr)//trim("_PH0.dat")
-    write(*,*)fname
+!     write(*,*)fname
     
     inquire(file=fname, exist=exist)
     
@@ -291,7 +335,7 @@ implicit none
     endif   
     
     do i=1,Nx+1
-        write(1,*)X(i)," ",PH0(i)
+        write(1,*)X(i)," ",PH0(i)," ",UH0(i)
     enddo
     
     print*,"Plot sol in file ",trim(fname),trim(", nt = "),trim(strn),trim(", min/max = "), minval(PH0),trim("/"), maxval(PH0)
@@ -304,7 +348,7 @@ end subroutine plot_sol
 ! Returns the inverse of a matrix calculated by finding the LU
 ! decomposition.  Depends on LAPACK.
 function inv(A) result(Ainv)
-  double precision, dimension(:,:), intent(in) :: A
+  double precision, dimension(:,:), Intent(in) :: A
   double precision, dimension(size(A,1),size(A,2)) :: Ainv
 
   double precision, dimension(size(A,1)) :: work  ! work array for LAPACK
