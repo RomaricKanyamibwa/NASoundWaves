@@ -80,7 +80,7 @@ END INTERFACE
     double precision :: alpha, beta
     double precision :: start, finish
     logical :: exist
-    character(len=20)::fname="Generated_files/time_file.txt"
+    character(len=30)::fname="Generated_files/time_file.txt"
     character(len=32) :: arg
     integer :: nb_arg
     
@@ -268,8 +268,10 @@ END INTERFACE
         open(125, file = fname, status='new')
     endif   
     write(125,*)'**********************************************************'
-    write(125,"(A,I6,A,I6)")'Nx=',Nx,',Nt=',Nt
-    write(125,*)'Time = ',finish-start,' seconds.'
+    write(125,*)'Nx =',Nx
+    write(125,*)'Nt =',Nt
+    write(125,*)'Nfiles =',n_images
+    write(125,*)'Time =',finish-start,' seconds.'
     write(*,*)'Time =',finish-start,' seconds.'
     write(125,*)'**********************************************************'
     write(125,*)''
