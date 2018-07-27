@@ -14,4 +14,4 @@ gnuplot -c gnuplot_main.gp $1 $2
 
 rm *.txt
 
-#xdg-open Sound_wave_Nx_$1_Nt_$2.gif
+xdg-open Sound_wave_Nx_$1_Nt_$2.gif

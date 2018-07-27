@@ -14,7 +14,7 @@ set output "./Sound_wave_Nx_".ARG1."_Nt_".ARG2.".gif"
 i = 1
 n=ARG2
 set xrange [0:100] #until xmax=D
-set yrange [-4:8]
+set yrange [-4:10]
 
 while(i < n){
 	system "clear"
@@ -22,18 +22,18 @@ while(i < n){
 	print "Nx = ",ARG1," and Nt = ",ARG2
 	print "	",i*100/n,"%"
 	if (i<10){
-		plot "img_000".i.".txt" using 1:2 title "Pressure" with lines, "img_000".i.".txt" using 1:3 title "Velocity" with lines; 
+		plot "img_000".i.".txt" using 1:2 title "Pressure" with lines linecolor rgb "black", "img_000".i.".txt" using 1:3 title "Velocity" with lines linecolor rgb "blue", "img_000".i.".txt" using 1:4 title "W" with lines linecolor rgb "green","img_000".i.".txt" using 1:5 title "T" with lines linecolor rgb "red"; 
 	}
 	else{
 		if (i<100){
-			plot "img_00".i.".txt" using 1:2 title "Pressure" with lines, "img_00".i.".txt" using 1:3 title "Velocity" with lines; 
+			plot "img_00".i.".txt" using 1:2 title "Pressure" with lines linecolor rgb "black", "img_00".i.".txt" using 1:3 title "Velocity" with lines linecolor rgb "blue", "img_00".i.".txt" using 1:4 title "W" with lines linecolor rgb "green","img_00".i.".txt" using 1:5 title "T" with lines linecolor rgb "red";
 		}
 		else{
 			if (i<1000){
-				plot "img_0".i.".txt" using 1:2 title "Pressure" with lines, "img_0".i.".txt" using 1:3 title "Velocity" with lines; 
+				plot "img_0".i.".txt" using 1:2 title "Pressure" with lines linecolor rgb "black", "img_0".i.".txt" using 1:3 title "Velocity" with lines linecolor rgb "blue", "img_0".i.".txt" using 1:4 title "W" with lines linecolor rgb "green","img_0".i.".txt" using 1:5 title "T" with lines linecolor rgb "red"; 
 			}
 			else{
-				plot "img_".i.".txt" using 1:2 title "Pressure" with lines, "img_".i.".txt" using 1:3 title "Velocity" with lines; 
+				plot "img_".i.".txt" using 1:2 title "Pressure" with lines linecolor rgb "black", "img_".i.".txt" using 1:3 title "Velocity" with lines linecolor rgb "blue", "img_".i.".txt" using 1:4 title "W" with lines linecolor rgb "green","img_".i.".txt" using 1:5 title "T" with lines linecolor rgb "red";
 			}
 		}
 	}

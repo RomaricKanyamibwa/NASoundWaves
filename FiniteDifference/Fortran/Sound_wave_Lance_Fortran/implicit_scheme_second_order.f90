@@ -1,12 +1,12 @@
 !In Fortan for a matrix: dimension(row_nb,col_nb)::matrix!
 !For browsering the matrix : matrix(row_nb,col_nb)!
 
-subroutine file_writing(dx,Nt,Nx_P,P,U)
+subroutine file_writing(dx,Nt,Nx_P,P,U,W,T)
 	implicit none
 	real :: dx
 	integer :: i,j
     integer:: Nt,Nx_P
-	real,dimension(Nx_P,Nt) :: P,U
+	real,dimension(Nx_P,Nt) :: P,U,W,T
 	character(len=80) file_name
 
 	do i=1,Nt
@@ -31,7 +31,11 @@ subroutine file_writing(dx,Nt,Nx_P,P,U)
 	 		write(11, fmt="(A)", advance="no")" "
 	 		write(11, fmt="(f23.20)", advance="no")P(j,i)	 		
 	 		write(11, fmt="(A)", advance="no")" "
-	 		write(11, fmt="(f23.20)", advance="yes")U(j,i)
+	 		write(11, fmt="(f23.20)", advance="no")U(j,i)	 			 		
+	 		write(11, fmt="(A)", advance="no")" "
+	 		write(11, fmt="(f23.20)", advance="no")W(j,i)	 			 		
+	 		write(11, fmt="(A)", advance="no")" "
+	 		write(11, fmt="(f23.20)", advance="yes")T(j,i)
 	 	end do
 	 	
 	 	close(11)
@@ -47,7 +51,7 @@ program test
 	real::D,dx,dt,c
 	real::start,end
 	character(len=32) :: Nx_P_str,Nt_str
-	real,allocatable :: A_ini(:,:),A_tri(:,:),P_final(:,:),P_temp(:,:),B(:),U(:,:)
+	real,allocatable :: A_ini(:,:),A_tri(:,:),P_final(:,:),P_temp(:,:),B(:),U(:,:),W(:,:),T(:,:)
 	
 	!Reading of arguments
 	call getarg(1, Nx_P_str)
@@ -56,7 +60,7 @@ program test
 	read(Nt_str,'(i10)') Nt
 	Nx_A=Nx_P-2
 
-	allocate(A_ini(Nx_A,Nx_A),A_tri(Nx_A,Nx_A),P_final(Nx_P,Nt+1),P_temp(Nx_A,Nt+1),B(Nx_A),U(Nx_P,Nt+1))
+	allocate(A_ini(Nx_A,Nx_A),A_tri(Nx_A,Nx_A),P_final(Nx_P,Nt+1),P_temp(Nx_A,Nt+1),B(Nx_A),U(Nx_P,Nt+1),W(Nx_P,Nt+1),T(Nx_P,Nt+1))
 
 
 	A_ini(:,:)=0.0
@@ -65,6 +69,8 @@ program test
 	P_temp(:,:)=0.0
 	B(:)=0.0
 	U(:,:)=0.0
+	W(:,:)=0.0
+	T(:,:)=0.0
 
 	
 
@@ -114,7 +120,7 @@ program test
 				B(j)=2*P_temp(j,i-1)-P_temp(j,i-2)
 			end do
 
-			!Transformation of B for triangular method
+			!Transformation of B for triangular meTd
 			do j=Nx_A-1,1,-1
 				B(j)=B(j)-B(j+1)*A_ini(j,j+1)/A_tri(j+1,j+1)
 			end do
@@ -128,6 +134,7 @@ program test
 			P_final(2:Nx_A+1,i)=P_temp(:,i)
 			P_final(1,i)=P_final(2,i)+2*dx*(-cos((i-1)*dt)+(1-(i-1)*dt)*exp(-(i-1)*dt))
 			P_final(Nx_P,i)=P_final(Nx_P-1,i)
+			!print *,"n=",i,"maxval=",maxval(P_final(:,i))
 
 		end if
 	end do
@@ -141,8 +148,18 @@ program test
 		endif
 	end do
 
+	!Calculating of W
+	do i=2,Nt+1
+		W(:,i)=(3.0/5.0)*(P_final(:,i)-P_final(:,i-1))+W(:,i-1)
+	end do
+
+	!Calculating of T
+	do i=1,Nt+1
+		T(:,i)=P_final(:,i)-W(:,i)
+	end do
+
 	call cpu_time(start)
-	call file_writing(dx,Nt+1,Nx_P,P_final,U)
+	call file_writing(dx,Nt+1,Nx_P,P_final,U,W,T)
 	call cpu_time(end)
 
 	print *,end-start,"s"
