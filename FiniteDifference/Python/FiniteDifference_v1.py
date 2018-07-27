@@ -68,19 +68,19 @@ if do_movie:
 # spatial domain  and  meshing
 X1_min = 0
 X1_max = 100.0
-Nx1 = 1000
+Nx1 = 5000
 h1 = (X1_max-X1_min)*1./Nx1
 X1 = numpy.zeros(Nx1+1)
 
 
 # temporal domain
 Temps_final = 200*numpy.pi
-Nt = 1000
+Nt = 5000
 dt = Temps_final * 1./Nt
 dt_over_h1 = dt/h1
 
 # approximate number of images generated
-n_images = 16
+n_images = 1000
 periode_images = int(Nt*1./n_images)
 
 # Pressure and Numerical solution (approx sol)
@@ -88,8 +88,8 @@ PH0 = numpy.zeros(Nx1+1)
 before_PH0 = numpy.zeros(Nx1+1)
 next_PH0 = numpy.zeros(Nx1+1)
 
-#u1 = numpy.zeros(Nx1-1)
-#next_u1 = numpy.zeros(Nx1-1)     
+UH0 = numpy.zeros(Nx1+1)
+next_UH0 = numpy.zeros(Nx1+1)     
 
 
 
@@ -100,7 +100,7 @@ Const_C=-(5./6)*(dt_over_h1*dt_over_h1)
 #At t=0 and x1=xw u=0 and P=0
 #plot_sol(0,0)
 
-def u1_ini(t):
+def velocity(t):
     return -numpy.sin(t)+(t)*numpy.exp(-t)
 
 #d_tu1
@@ -205,14 +205,14 @@ fig = plt.figure()
 def plot_sol(n,ielem):
     fig.clf()
     fname = dir_name+"out"+repr(n)+"_PH"+str(ielem)+".png"
-    fname2 = dir_name+"out"+repr(n)+"_PH"+str(ielem)+".dat"
-    f= open(fname2,"w+")
-    for i in range(Nx1+1):
-        str1=str(X1[i])+"\t"+str(PH0[i])+"\n"
-        f.write(str1)
+    #fname2 = dir_name+"out"+repr(n)+"_PH"+str(ielem)+".dat"
+    #f= open(fname2,"w+")
+    #for i in range(Nx1+1):
+        #str1=str(X1[i])+"\t"+str(PH0[i])+"\t"+str(UH0[i])+"\n"
+        #f.write(str1)
     print("Plot sol in file ", fname, ", nt = ", n, ", min/max = ", min(PH0), "/", max(PH0))
     X_full = numpy.concatenate((X1,[X1[-1]]),axis=0)
-    #u_full = numpy.concatenate((u1,[u1[0]]),axis=0)
+    U_full = numpy.concatenate((UH0,[UH0[0]]),axis=0)
     P_full = numpy.concatenate((PH0,[PH0[0]]),axis=0)
     # trace aussi les vitesses:
     #v = map(vitesse, u)
@@ -220,9 +220,9 @@ def plot_sol(n,ielem):
     #plt.xlim(X1_min, X1_max)
     plt.ylim(-8, 8)
     #plt.xlabel('x')
-    image = (plt.plot(X1, PH0, '-', color='r'))#plt.plot(X_full, u_full, '-', color='k'),
-    #plt.legend(['u1', 'PH0'], loc='upper left')
-    plt.legend(['PH0'], loc='upper left')
+    image = (plt.plot(X1, PH0, '-', color='r'),plt.plot(X_full, U_full,'-', color='k'))
+    plt.legend(['Pressure', 'Velocity'], loc='upper left')
+    #plt.legend(['PH0'], loc='upper left')
     #maximage += (plt.plot(X_full, v_full, '-', color='b'))
     
     fig.savefig(fname)
@@ -251,12 +251,17 @@ for nt in range(1,Nt):
     else:
         print("ERROR")
         exit()
-        #for i in range(0,Nx1):        
-            #next_u[i] =-dt_over_h*(flux(u[i])-flux(u[i-1]))+u[i]   # ecrire ici le schema explicite
-            
+    
+    #pressure
     before_PH0[:]=PH0[:]
     PH0[:] = next_PH0[:]
     
+    #velocity
+    next_UH0[0]=velocity((nt+1)*dt)
+    next_UH0[Nx1]=0.0
+    next_UH0[1:Nx1]=UH0[1:Nx1]-1.0/2.0*dt_over_h1*(next_PH0[1:Nx1]-next_PH0[0:Nx1-1])
+    
+    UH0[:]=next_UH0[:]
 
     if (nt+1)%periode_images == 0 or (nt+1) == Nt:
         #print("Nt=",nt+1)

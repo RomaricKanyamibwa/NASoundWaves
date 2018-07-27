@@ -80,7 +80,9 @@ END INTERFACE
     double precision :: alpha, beta
     double precision :: start, finish
     logical :: exist
-    character(len=20)::fname="time_file.txt"
+    character(len=20)::fname="Generated_files/time_file.txt"
+    character(len=32) :: arg
+    integer :: nb_arg
     
     ! External procedures defined in BLAS
     external DGEMV
@@ -100,21 +102,64 @@ END INTERFACE
 !     call omp_set_num_threads(4)
 !     print *,"Num_thds=", omp_get_num_threads()
 
+    nb_arg=iargc()
     alpha=1.d0; beta=0.d0
     dir_name = 'simu_impliciteV1/'    
     ! spatial domain and mesh
     X_min = 0.0
     X_max = 100.0
     Nx= 1000
-    dx = (X_max-X_min)*1.0/Nx
-    Nt = 1000
-    
-    !number of images generated
-    periode_images = int(Nt*1./n_images)
 
     ! temporal domain
     Final_time = 200*PI! t in [0,Final_time]
-    dt =  Final_time * 1./Nt
+    Nt = 1000
+    
+    i=1
+    do  while (i <= nb_arg)
+        call getarg(i, arg)
+
+        select case (arg)
+
+            case ('-h', '--help')
+                call print_help()
+                stop
+            case ('-t')
+                i=i+1
+                call getarg(i,arg)
+                read(arg,*)Nt
+                print*,"Nt=",Nt
+            case ('-x')
+                i=i+1
+                call getarg(i,arg)
+                read(arg,*)Nx
+                print*,"Nx=",Nx
+            case ('-d')
+                i=i+1
+                call getarg(i,arg)
+                read(arg,*)X_max
+                print*,"space interval S=[0,",X_max,"]"
+            case ('--time')
+                i=i+1
+                call getarg(i,arg)
+                read(arg,*)Final_time
+                print*,"time interval T=[0,",Final_time,"]"
+            case ('--nimages')
+                i=i+1
+                call getarg(i,arg)
+                read(arg,*)n_images
+                print*,"nimages=",n_images
+            case default
+                print '(a,a,/)', 'Unrecognized command-line option: ', arg
+                call print_help()
+                stop
+        end select
+        i=i+1
+    end do
+    
+    !number of images generated
+    periode_images = int(Nt*1./n_images)
+    dx = (X_max-X_min)*1.0/Nx
+    dt =  Final_time * 1.0/Nt
     dt_over_dx = (1.0*dt)/dx
     Const_C=-(5./6)*(dt_over_dx*dt_over_dx)
     
@@ -146,6 +191,10 @@ END INTERFACE
     
     CALL constr_matrix_A(Nx,Const_C)
     CALL plot_sol(Nx,0,PH0,UH0,X)
+    next_UH0(1)=velocity(dt)
+    next_UH0(Nx+1)=0.0
+    next_UH0(2:Nx)=UH0(2:Nx)-1.0/2.0*dt_over_dx*(next_PH0(2:Nx)-next_PH0(1:Nx-1))
+    UH0(:)=next_UH0(:)
     CALL plot_sol(Nx,1,PH0,UH0,X)
     
 !     do i=1,Nx-1
@@ -218,12 +267,14 @@ END INTERFACE
     else
         open(125, file = fname, status='new')
     endif   
-    write(125,*)'********************************************************'
+    write(125,*)'**********************************************************'
     write(125,"(A,I6,A,I6)")'Nx=',Nx,',Nt=',Nt
-    write(125,*)'Time = ",',finish-start,'," seconds.'
-    write(125,*)'********************************************************'
+    write(125,*)'Time = ',finish-start,' seconds.'
+    write(*,*)'Time =',finish-start,' seconds.'
+    write(125,*)'**********************************************************'
     write(125,*)''
     close(125)
+    
     !-------------------END OF program-------------------
     
     ! deallocation and end of program
@@ -237,6 +288,25 @@ END INTERFACE
         print*,'error in deallocating array'
     endif
 
+    
+    !------------------- Print Help----------------------
+    
+    contains
+
+    subroutine print_help()
+        print  '(a)','usage: SoundWaves [OPTIONS]'
+        print  '(a)',''
+        print  '(a)','Without further options, SoundWaves initializes Nx=1000,Nt=1000,D=100 and T=200*pi,n_images=1000.'
+        print  '(a)',''
+        print  '(a)','cmdline options:'
+        print  '(a)',''
+        print  '(a)','  -x          Nx size'
+        print  '(a)','  -t          Nt size'
+        print  '(a)','  -d,         [0,D] space interval'
+        print  '(a)','  --time,     [0,T] time interval'
+        print  '(a)','  --nimages,  number of images'
+        print  '(a)','  -h, --help  print usage information and exit'
+    end subroutine print_help
 end program finite_diff
 
 

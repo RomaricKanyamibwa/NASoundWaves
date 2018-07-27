@@ -1,4 +1,4 @@
-CXX=gfortran -O3 -fimplicit-none -fopenmp -Werror -Wall -O3 -ffast-math -ftree-vectorize -march=native -funroll-loops
+CXX=gfortran -O3 -fimplicit-none -fopenmp -Werror -Wall -ffast-math -ftree-vectorize -march=native -funroll-loops
 
 FLAGS=-Iinc -g
 
