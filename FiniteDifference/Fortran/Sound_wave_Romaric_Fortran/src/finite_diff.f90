@@ -23,6 +23,7 @@
 module Global_Var
     double precision, allocatable :: A(:,:)
     double precision, allocatable :: B(:)
+    double precision, allocatable :: WH0(:),TH0(:),PB1(:)
     character(len=30) :: dir_name
     
     contains
@@ -77,6 +78,7 @@ END INTERFACE
     double precision :: X_min,X_max,dx,Final_time,dt,dt_over_dx,Const_C
     double precision, allocatable :: X(:),PH0(:),next_PH0(:),before_PH0(:)
     double precision, allocatable :: Ainv(:,:),UH0(:),next_UH0(:)
+    double precision, allocatable :: next_WH0(:)
     double precision :: alpha, beta
     double precision :: start, finish
     logical :: exist
@@ -170,12 +172,31 @@ END INTERFACE
         print*,'error: could not allocate memory for array X or PH0 or next or before or B, Nx+1=',Nx+1
         stop
     endif
+    
+    allocate(WH0(Nx+1),next_WH0(Nx+1),TH0(Nx+1),PB1(Nx+1),stat=error)
+    if (error.ne.0) then
+        print*,'error: could not allocate memory for array WH0 or TH0 or next or before or B, Nx+1=',Nx+1
+        stop
+    endif
         
+    !Initialisation
+    !pressure
     PH0(:)=0.0
     next_PH0(:)=0.0
     before_PH0(:)=0.0
+    
+    PB1(:)=0.0
+    
+    !velocity
     UH0(:)=0.0
     next_UH0(:)=0.0
+    
+    !omega
+    WH0(:)=0.0
+    next_WH0(:)=0.0
+    
+    !temperature
+    TH0(:)=0.0
     
 !     executable statements  
 !     print*,"Some results Nt",Nt
@@ -231,6 +252,11 @@ END INTERFACE
         next_UH0(Nx+1)=0.0
         next_UH0(2:Nx)=UH0(2:Nx)-1.0/2.0*dt_over_dx*(next_PH0(2:Nx)-next_PH0(1:Nx-1))
         
+        
+        !omega and temperature
+        
+        next_WH0(:)=3.0/5.0*(next_PH0(:)-PH0(:))+WH0(:)
+        TH0(:)=next_PH0(:)-next_WH0(:)        
     !     print*,"Next PH0"
     !     do i=1,Nx+1
     !         print*,real( next_PH0(i) ) 
@@ -280,12 +306,12 @@ END INTERFACE
     !-------------------END OF program-------------------
     
     ! deallocation and end of program
-    deallocate(X,PH0,next_PH0,before_PH0,stat=error)
+    deallocate(X,PH0,next_PH0,before_PH0,TH0,PB1,stat=error)
     if (error.ne.0) then
         print*,'error in deallocating array'
     endif
     
-    deallocate(A,Ainv,B,stat=error)
+    deallocate(A,Ainv,B,WH0,next_WH0,UH0,next_UH0,stat=error)
     if (error.ne.0) then
         print*,'error in deallocating array'
     endif
@@ -407,7 +433,7 @@ implicit none
     endif   
     
     do i=1,Nx+1
-        write(1,*)X(i)," ",PH0(i)," ",UH0(i)
+        write(1,*)X(i)," ",PH0(i)," ",UH0(i)," ",WH0(i)," ",TH0(i)
     enddo
     
     print*,"Plot sol in file ",trim(fname),trim(", nt = "),trim(strn),trim(", min/max = "), minval(PH0),trim("/"), maxval(PH0)

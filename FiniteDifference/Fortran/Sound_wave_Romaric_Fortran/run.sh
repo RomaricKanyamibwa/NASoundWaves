@@ -21,3 +21,6 @@ echo "gnuplot -c $load \"gnuplot_main.gp\" $Nx $Nt $Step"
 
 gnuplot -c $load "gnuplot_main.gp" $Nx $Nt $Step
 
+echo "Generated_files/Pressure_evolution_Nx_"$Nx"_Nt_"$Nt".gif"
+xdg-open "Generated_files/Pressure_evolution_Nx_"$Nx"_Nt_"$Nt".gif"
+
