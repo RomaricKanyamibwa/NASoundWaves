@@ -20,6 +20,7 @@ n=ARG2
 step=ARG3
 
 print "Nx = ",ARG1,",Nt = ",ARG2 ," and Step=",ARG3
+print "Generating gif image . . . . . ."
 
 set xrange [-2:100] #until xmax=D
 set yrange [-4:16]
