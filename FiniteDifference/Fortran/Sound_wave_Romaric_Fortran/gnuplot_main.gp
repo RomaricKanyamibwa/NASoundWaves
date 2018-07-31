@@ -44,7 +44,7 @@ set yrange [-4:16]
 # plot "simu_impliciteV1/out0_PH0.dat" using 1:2 title "Fluid pressure";
 # plot "simu_impliciteV1/out1_PH0.dat" using 1:2 title "Fluid pressure";
 while(i <= n){
-	plot "simu_impliciteV1/out".i."_PH0.dat" using 1:2 title "Fluid pressure" with lines ,"simu_impliciteV1/out".i."_PH0.dat" using 1:3 title "Fluid velocity" with lines; 
+	plot "simu_impliciteV1/out".i."_PH0.dat" using 1:2 title "Fluid pressure" with lines ,"simu_impliciteV1/out".i."_PH0.dat" using 1:3 title "Fluid velocity" with lines , "simu_impliciteV1/out".i."_PH0.dat" using 1:4 title "Fluid WH0" with lines, "simu_impliciteV1/out".i."_PH0.dat" using 1:5 title "Temperature" with lines; 
 	i = i+step;
 }
 
