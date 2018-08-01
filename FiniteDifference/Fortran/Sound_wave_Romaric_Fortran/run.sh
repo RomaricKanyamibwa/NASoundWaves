@@ -9,9 +9,10 @@ Nx=$1
 Nt=$2
 NumImages=$3
 
-echo "Deleting simu_impliciteV1/"
+echo "cleaning simu_impliciteV1/"
 rm -rf simu_impliciteV1/*
-mkdir simu_impliciteV1
+echo "Creating simu_impliciteV1/"
+mkdir -vp simu_implicite
 
 Step=$((Nt/ NumImages))
 echo "Step:$Step"

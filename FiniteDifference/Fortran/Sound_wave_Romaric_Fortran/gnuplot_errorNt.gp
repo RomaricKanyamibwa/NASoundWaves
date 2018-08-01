@@ -26,27 +26,39 @@ set ztics border in scale 0,0 nomirror norotate  autojustify
 set cbtics border in scale 0,0 mirror norotate  autojustify
 set rtics axis in scale 0,0 nomirror norotate  autojustify
 set title font 'Helvetica,14'
-set title "Sound waves in Rarefied Gas: Fluid Pressure/velocity over time \nNx = ".ARG1." and Nt = ".ARG2 
+set title "Sound waves in Rarefied Gas: Fluid Pressure over time \nNx = ".ARG4
 set xlabel 'X'	
 set ylabel 'Y'
 
-set output "Generated_files/Pressure_evolution_Nx_".ARG1."_Nt_".ARG2.".gif"
+set output "Generated_files/Pressure_evolution_Nx_".ARG1."_Nt".ARG2."-".ARG3."-".ARG4.".gif"
 #set n = `echo $n`
 i = 0
-n=ARG2
-step=ARG3
+j = 0
+k = 0
+n1=ARG2
+n2=ARG3
+n3=ARG4
+Numimages=ARG5
 
-print "Nx = ",ARG1,",Nt = ",ARG2 ," and Step=",ARG3
+print "Nt = ",ARG2,",",ARG3,",",ARG4,",Nx = ",ARG1 ," and Numimages=",Numimages
 print "Generating gif image . . . . . ."
+
+step1=n1/Numimages
+step2=n2/Numimages
+step3=n3/Numimages
+
+print "S1 = ",step1,",S3 = ",step2,",S3 = ",step3
 
 set xrange [-2:100] #until xmax=D
 set yrange [-4:16]
-# plot "simu_impliciteV1/out0_Nx".ARG1."_Nt".ARG2."_PH0.dat" using 1:2 title "Fluid pressure";
-# plot "simu_impliciteV1/out1_Nx".ARG1."_Nt".ARG2."_PH0.dat" using 1:2 title "Fluid pressure";
-while(i <= n){
-#out0_Nx5000_Nt5000_PH0.dat
-	plot "simu_impliciteV1/out".i."_Nx".ARG1."_Nt".ARG2."_PH0.dat" using 1:2 title "Fluid pressure" with lines ,"simu_impliciteV1/out".i."_Nx".ARG1."_Nt".ARG2."_PH0.dat" using 1:3 title "Fluid velocity" with lines , "simu_impliciteV1/out".i."_Nx".ARG1."_Nt".ARG2."_PH0.dat" using 1:4 title "Fluid WH0" with lines, "simu_impliciteV1/out".i."_Nx".ARG1."_Nt".ARG2."_PH0.dat" using 1:5 title "Temperature" with lines; 
-	i = i+step;
+# plot "simu_impliciteV1/out0_PH0.dat" using 1:2 title "Fluid pressure";
+# plot "simu_impliciteV1/out1_PH0.dat" using 1:2 title "Fluid pressure";
+while(i <= n1 ){
+	plot "simu_impliciteV1/out".i."_Nx".ARG1."_Nt".ARG2."_PH0.dat" using 1:2 title "Fluid pressure Nt=".ARG2 with lines ,"simu_impliciteV1/out".j."_Nx".ARG1."_Nt".ARG3."_PH0.dat" using 1:2 title "Fluid pressure Nt=".ARG3 with lines , "simu_impliciteV1/out".k."_Nx".ARG1."_Nt".ARG4."_PH0.dat" using 1:2 title "Fluid pressure Nt=".ARG4 with lines;
+# 	, "simu_impliciteV1/out".i."_Nx".ARG1."_Nt".ARG2."_PH0.dat" using 1:2 title "Temperature" with lines;
+	i = i+step1;
+	j = j+step2;
+	k = k+step3;
 }
 
 set output

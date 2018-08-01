@@ -211,12 +211,12 @@ END INTERFACE
     !$OMP END PARALLEL DO 
     
     CALL constr_matrix_A(Nx,Const_C)
-    CALL plot_sol(Nx,0,PH0,UH0,X)
+    CALL plot_sol(Nx,Nt,0,PH0,UH0,X)
     next_UH0(1)=velocity(dt)
     next_UH0(Nx+1)=0.0
     next_UH0(2:Nx)=UH0(2:Nx)-1.0/2.0*dt_over_dx*(next_PH0(2:Nx)-next_PH0(1:Nx-1))
     UH0(:)=next_UH0(:)
-    CALL plot_sol(Nx,1,PH0,UH0,X)
+    CALL plot_sol(Nx,Nt,1,PH0,UH0,X)
     
 !     do i=1,Nx-1
 !         print*,real( A(i,:) ) 
@@ -271,7 +271,7 @@ END INTERFACE
         UH0(:)=next_UH0(:)
         
         if ( (MOD((nt_i),periode_images) == 0) .OR. ((nt_i) == Nt) ) then
-            CALL plot_sol(Nx,nt_i,PH0,UH0,X)
+            CALL plot_sol(Nx,Nt,nt_i,PH0,UH0,X)
         endif
         
     !     print*,"after aff PH0"
@@ -406,16 +406,16 @@ implicit none
     
 end subroutine constr_vect_B
 
-subroutine plot_sol(Nx,n,PH0,UH0,X)
+subroutine plot_sol(Nx,Nt,n,PH0,UH0,X)
 use Global_Var
 implicit none
     double precision,Intent(IN)::PH0(Nx+1),UH0(Nx+1),X(Nx+1)
-    integer,Intent(In)::n,Nx
+    integer,Intent(In)::n,Nx,Nt
     character(len=100)::fname,tmpstr='',strn
     logical :: exist
     integer :: i
 
-    write (tmpstr,*) trim("out"),n
+    write (tmpstr,*) trim("out"),n,"_Nx",Nx,"_Nt",Nt
     write (strn,*)n
     CALL strip(strn,' ')
     fname=trim(dir_name)
