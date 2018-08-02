@@ -25,8 +25,8 @@
 ! with tB0 the temperature
 
 module Global_Var
-    double precision, allocatable :: A(:,:)
-    double precision, allocatable :: B(:)
+    double precision, allocatable :: A(:,:),Atau(:,:)
+    double precision, allocatable :: B(:),Btau(:)
     double precision, allocatable :: WH0(:),TH0(:),PB1(:)
     character(len=30) :: dir_name
     
@@ -81,7 +81,7 @@ END INTERFACE
     double precision ::PI=4.D0*DATAN(1.D0) ,acc
     double precision :: X_min,X_max,dx,Final_time,dt,dt_over_dx,Const_C
     double precision, allocatable :: X(:),PH0(:),next_PH0(:),before_PH0(:)
-    double precision, allocatable :: Ainv(:,:),UH0(:),next_UH0(:)
+    double precision, allocatable :: Ainv(:,:),Atauinv(:,:),UH0(:),next_UH0(:)
     double precision, allocatable :: next_WH0(:)
     double precision :: alpha, beta
     double precision :: start, finish
@@ -226,7 +226,7 @@ END INTERFACE
 !         print*,real( A(i,:) ) 
 !     end do
     
-    allocate(B(Nx-1),Ainv(Nx-1,Nx-1),stat=error)
+    allocate(B(Nx-1),Btau(Nx-1),Ainv(Nx-1,Nx-1),Atauinv(Nx-1,Nx-1),stat=error)
     if (error.ne.0) then
         print*,'error: could not allocate memory for vector B, Nx=',Nx
         stop

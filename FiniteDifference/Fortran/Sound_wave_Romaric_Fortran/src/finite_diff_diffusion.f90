@@ -20,6 +20,37 @@
 ! d_t tB0 - 1.0/2 *gamma2 d_yy tB0 = 0
 ! with P the temparature
 
+
+subroutine constr_matrix_Atau(Ny,Const_C)
+use Global_Var
+implicit none
+
+    double precision,Intent(IN):: Const_C
+    integer,intent(IN) :: Ny
+    integer ::i,error
+    
+    allocate(Atau(Ny-1,Ny-1),stat=error)
+    if (error.ne.0) then
+        print*,'error: could not allocate memory for array Atau, Ny=',Ny
+        stop
+    endif
+    Atau(:,:)=0.0
+    Atau(1,1)=1-Const_C
+    Atau(1,2)=Const_C
+    
+    !$OMP PARALLEL DO 
+    do i=2,Ny-2
+        Atau(i,i-1)=Const_C
+        Atau(i,i)=1-2*Const_C
+        Atau(i,i+1)=Const_C
+    enddo
+    !$OMP END PARALLEL DO
+    
+    Atau(Ny-1,Ny-2)=Const_c
+    Atau(Ny-1,Ny-1)=1-Const_C
+
+end subroutine constr_matrix_Atau
+
 subroutine constr_vect_Btau(Const_D,tauh0,Ny,Tn)
 use Global_Var
 implicit none
@@ -29,10 +60,10 @@ implicit none
     double precision,Intent(IN)::Tn(Ny-1)
     integer ::i
     
-    B(1)=2*Tn(1)-Const_D*tauh0
+    Btau(1)=2*Tn(1)-Const_D*tauh0
     !$OMP PARALLEL DO 
     do i=2,Ny-1
-        B(i)=Tn(i)
+        Btau(i)=Tn(i)
     enddo
     !$OMP END PARALLEL DO
     
