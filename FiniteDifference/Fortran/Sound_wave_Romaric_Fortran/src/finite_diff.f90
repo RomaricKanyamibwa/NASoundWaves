@@ -1,6 +1,6 @@
 ! Created on Thu Jul 20 14:04:35 2018
 ! @author: SATGE Lancelot, KANYAMIBWA Romaric
-! Resolution of PDE using Finite Difference
+! Resolution of PDE using Finite Difference Method
 ! ================
 ! Test of Finite Difference Numerical Schemes on sound waves equations
 ! """
@@ -16,9 +16,13 @@
 ! #############################################################################
 
 
-! We want to resolve numericaly the following PDE
+! Numerical Resolution of leading order system
+
 ! d_tt PH0 - 5.0/6 * d_xx PH0 = 0
 ! with P the pressure
+
+! d_t tB0 - 1.0/2 *gamma2 d_yy tB0 = 0
+! with tB0 the temperature
 
 module Global_Var
     double precision, allocatable :: A(:,:)
@@ -336,145 +340,3 @@ END INTERFACE
         print  '(a)','  -h, --help  print usage information and exit'
     end subroutine print_help
 end program finite_diff
-
-
-function acceleration (t) result(accel)
-implicit none
-    
-    double precision,Intent(in):: t
-    double precision ::accel
-    
-    accel=-cos(t)+(1-t)*exp(-t)
-
-end function acceleration
-
-
-function velocity (t) result(V)
-    implicit none
-    double precision,Intent(in):: t
-    double precision ::V
-    
-    V=-sin(t)+(t)*exp(-t)
-end function velocity
-
-subroutine constr_matrix_A(Nx,Const_C)
-use Global_Var
-implicit none
-
-    double precision,Intent(IN):: Const_C
-    integer,intent(IN) :: Nx
-    integer ::i,error
-!     double precision ,allocatable ,Intent(OUT) :: A(:,:)
-    
-    allocate(A(Nx-1,Nx-1),stat=error)
-    if (error.ne.0) then
-        print*,'error: could not allocate memory for array A, Nx=',Nx
-        stop
-    endif
-    A(:,:)=0.0
-    A(1,1)=1-Const_C
-    A(1,2)=Const_C
-    
-    !$OMP PARALLEL DO 
-    do i=2,Nx-2
-        A(i,i-1)=Const_C
-        A(i,i)=1-2*Const_C
-        A(i,i+1)=Const_C
-    enddo
-    !$OMP END PARALLEL DO
-    
-    A(Nx-1,Nx-2)=Const_c
-    A(Nx-1,Nx-1)=1-Const_C
-
-end subroutine constr_matrix_A
-
-subroutine constr_vect_B(Const_C,dx,acc,Nx,Pn1,Pn2)
-use Global_Var
-implicit none
-
-    double precision,Intent(IN):: Const_C,dx,acc
-    integer,Intent(IN)::Nx
-    double precision,Intent(IN)::Pn1(Nx-1),Pn2(Nx-1)
-    integer ::i
-    
-    B(1)=2*Pn2(1)-Pn1(1)-2*Const_C*dx*acc
-    !$OMP PARALLEL DO 
-    do i=2,Nx-1
-        B(i)=2*Pn2(i)-Pn1(i)
-    enddo
-    !$OMP END PARALLEL DO
-    
-end subroutine constr_vect_B
-
-subroutine plot_sol(Nx,Nt,n,PH0,UH0,X)
-use Global_Var
-implicit none
-    double precision,Intent(IN)::PH0(Nx+1),UH0(Nx+1),X(Nx+1)
-    integer,Intent(In)::n,Nx,Nt
-    character(len=100)::fname,tmpstr='',strn
-    logical :: exist
-    integer :: i
-
-    write (tmpstr,*) trim("out"),n,"_Nx",Nx,"_Nt",Nt
-    write (strn,*)n
-    CALL strip(strn,' ')
-    fname=trim(dir_name)
-    CALL strip(tmpstr,' ')
-!     write(*,*)trim(tmpstr),"hahah"
-    fname=trim(fname)//trim(tmpstr)//trim("_PH0.dat")
-!     write(*,*)fname
-    
-    inquire(file=fname, exist=exist)
-    
-    if (exist) then
-        open(1, file = fname, status='old')
-    else
-        open(1, file = fname, status='new')
-    endif   
-    
-    do i=1,Nx+1
-        write(1,*)X(i)," ",PH0(i)," ",UH0(i)," ",WH0(i)," ",TH0(i)
-    enddo
-    
-    print*,"Plot sol in file ",trim(fname),trim(", nt = "),trim(strn),trim(", min/max = "), minval(PH0),trim("/"), maxval(PH0)
-    
-    close(1)
-    
-end subroutine plot_sol
-
-
-! Returns the inverse of a matrix calculated by finding the LU
-! decomposition.  Depends on LAPACK.
-function inv(A) result(Ainv)
-  double precision, dimension(:,:), Intent(in) :: A
-  double precision, dimension(size(A,1),size(A,2)) :: Ainv
-
-  double precision, dimension(size(A,1)) :: work  ! work array for LAPACK
-  integer, dimension(size(A,1)) :: ipiv   ! pivot indices
-  integer :: n, info
-
-  ! External procedures defined in LAPACK
-  external DGETRF
-  external DGETRI
-
-  ! Store A in Ainv to prevent it from being overwritten by LAPACK
-  Ainv = A
-  n = size(A,1)
-
-  ! DGETRF computes an LU factorization of a general M-by-N matrix A
-  ! using partial pivoting with row interchanges.
-  call DGETRF(n, n, Ainv, n, ipiv, info)
-
-  if (info /= 0) then
-     stop 'Matrix is numerically singular!'
-  end if
-
-  ! DGETRI computes the inverse of a matrix using the LU factorization
-  ! computed by DGETRF.
-  call DGETRI(n, Ainv, n, ipiv, work, n, info)
-
-  if (info /= 0) then
-     stop 'Matrix inversion failed!'
-  end if
-end function inv
-

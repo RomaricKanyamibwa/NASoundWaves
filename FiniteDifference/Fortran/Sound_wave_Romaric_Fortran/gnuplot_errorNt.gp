@@ -50,7 +50,7 @@ step3=n3/Numimages
 print "S1 = ",step1,",S3 = ",step2,",S3 = ",step3
 
 set xrange [-2:100] #until xmax=D
-set yrange [-4:16]
+set yrange [-2:8]
 # plot "simu_impliciteV1/out0_PH0.dat" using 1:2 title "Fluid pressure";
 # plot "simu_impliciteV1/out1_PH0.dat" using 1:2 title "Fluid pressure";
 while(i <= n1 ){

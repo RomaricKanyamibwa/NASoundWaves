@@ -6,7 +6,7 @@ LIB=liblapack.a librefblas.a liblapacke.a
 #LDFLAGS=-lboost_program_options -lm
 #$(CXX) -o $@ $^ $(LDFLAGS)
 
-FILES=finite_diff
+FILES=finite_diff finite_diff_diffusion inv_matrix plot_finite_diff finite_diff_acoustic
 OBJECTS=$(addsuffix .o, $(FILES))
 BIN=bin/SoundWaves
 
