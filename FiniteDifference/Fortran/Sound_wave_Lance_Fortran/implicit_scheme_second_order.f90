@@ -9,17 +9,17 @@ subroutine file_writing(dx,Nt,Nx_P,P,U,W,T)
 	real,dimension(Nx_P,Nt) :: P,U,W,T
 	character(len=80) file_name
 
-	do i=1,Nt
+	do i=1,Nt,Nt/1000+1
 		call system('clear')		
 		print *,"### File Creation ###"
 		print *,i*100/(Nt+1),"%"
 		print *,"Nx =",Nx_P,"Nt =",Nt-1
 		if (i<10) then		
-	  		write(file_name,'(A,I1.1,A)') "file_txt/img_000",i,".txt"
+	  		write(file_name,'(A,I1.1,A)') "file_txt/img_",i,".txt"
 		else if (i<100) then
-			write(file_name,'(A,I2.1,A)') "file_txt/img_00",i,".txt"
+			write(file_name,'(A,I2.1,A)') "file_txt/img_",i,".txt"
 		else if (i<1000) then
-			write(file_name,'(A,I3.1,A)') "file_txt/img_0",i,".txt"
+			write(file_name,'(A,I3.1,A)') "file_txt/img_",i,".txt"
 		else if (i<10000) then
 			write(file_name,'(A,I4.1,A)') "file_txt/img_",i,".txt"
 		endif
@@ -120,7 +120,7 @@ program test
 				B(j)=2*P_temp(j,i-1)-P_temp(j,i-2)
 			end do
 
-			!Transformation of B for triangular meTd
+			!Transformation of B for triangular methode
 			do j=Nx_A-1,1,-1
 				B(j)=B(j)-B(j+1)*A_ini(j,j+1)/A_tri(j+1,j+1)
 			end do
