@@ -16,10 +16,11 @@
 ! #############################################################################
 
 ! subroutine for .dat files creation
-subroutine plot_sol(Nx,Nt,n,PH0,UH0,X)
+subroutine plot_sol(Nx,Nt,n,PH0,UH0,X,Y)
 use Global_Var
 implicit none
-    double precision,Intent(IN)::PH0(Nx+1),UH0(Nx+1),X(Nx+1)
+    double precision,Intent(IN)::PH0(Nx+1),UH0(Nx+1)
+    double precision,Intent(IN)::X(Nx+1),Y(Nx+1)
     integer,Intent(In)::n,Nx,Nt
     character(len=100)::fname,tmpstr='',strn
     logical :: exist
@@ -42,11 +43,27 @@ implicit none
         open(1, file = fname, status='new')
     endif   
     
-    do i=1,Nx+1
-        write(1,*)X(i)," ",PH0(i)," ",UH0(i)," ",WH0(i)," ",TH0(i)
-    enddo
+    print*,"Plot sol in file ",trim(fname),&
+    trim(", nt = "),trim(strn),trim(",PH0 min/max = "),&
+    minval(PH0),trim("/"), maxval(PH0)
     
-    print*,"Plot sol in file ",trim(fname),trim(", nt = "),trim(strn),trim(", min/max = "), minval(PH0),trim("/"), maxval(PH0)
+    print*,trim("---TB0 min/max = "), minval(TB0),trim("/"), maxval(TB0),"---"
+    if(order == 0) then
+    
+        do i=1,Nx+1
+            write(1,*)X(i)," ",PH0(i)," ",UH0(i)," ",WH0(i)," ",TH0(i) &
+            ," ",Y(i)," ",TB0(i)," ",WB0(i)
+        enddo
+        
+    else if( order == 1) then
+    
+        do i=1,Nx+1
+            write(1,*)X(i)," ",PH0(i)," ",UH0(i)," ",WH0(i)," ",TH0(i) &
+            ," ",Y(i)," ",TB0(i)," ",WB0(i)," ",UB1(i)
+        enddo
+        print*,trim("---UB1 min/max = "), minval(UB1),trim("/"), maxval(UB1),"---"
+        
+    endif
     
     close(1)
     

@@ -65,7 +65,7 @@ implicit none
     enddo
     !$OMP END PARALLEL DO
     
-    A(Nx-1,Nx-2)=Const_c
+    A(Nx-1,Nx-2)=Const_C
     A(Nx-1,Nx-1)=1-Const_C
 
 end subroutine constr_matrix_A

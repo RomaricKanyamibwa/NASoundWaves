@@ -7,7 +7,7 @@
 
 reset
 # set linetype 1 lc rgb "dark-violet" with linespoints
-set term gif animate
+set term gif animate size 640,720
 set boxwidth 0.3 absolute
 set style fill   solid 1.00 border lt -1
 set grid nopolar
@@ -26,27 +26,59 @@ set ztics border in scale 0,0 nomirror norotate  autojustify
 set cbtics border in scale 0,0 mirror norotate  autojustify
 set rtics axis in scale 0,0 nomirror norotate  autojustify
 set title font 'Helvetica,14'
-set title "Sound waves in Rarefied Gas: Fluid Pressure/velocity over time \nNx = ".ARG1." and Nt = ".ARG2 
+# set title "Sound waves in Rarefied Gas \nNx = ".ARG1." and Nt = ".ARG2 
 set xlabel 'X'	
-set ylabel 'Y'
+# set ylabel 'Y'
 
 set output "Generated_files/Pressure_evolution_Nx_".ARG1."_Nt_".ARG2.".gif"
 #set n = `echo $n`
 i = 0
 n=ARG2
 step=ARG3
+order=ARG4
 
-print "Nx = ",ARG1,",Nt = ",ARG2 ," and Step=",ARG3
+print "Nx = ",ARG1,",Nt = ",ARG2 ,",Step=",ARG3," and Order=",ARG4
 print "Generating gif image . . . . . ."
 
-set xrange [-2:100] #until xmax=D
-set yrange [-4:16]
+
 # plot "simu_impliciteV1/out0_Nx".ARG1."_Nt".ARG2."_PH0.dat" using 1:2 title "Fluid pressure";
 # plot "simu_impliciteV1/out1_Nx".ARG1."_Nt".ARG2."_PH0.dat" using 1:2 title "Fluid pressure";
 while(i <= n){
 #out0_Nx5000_Nt5000_PH0.dat
-	plot "simu_impliciteV1/out".i."_Nx".ARG1."_Nt".ARG2."_PH0.dat" using 1:2 title "Fluid pressure" with lines ,"simu_impliciteV1/out".i."_Nx".ARG1."_Nt".ARG2."_PH0.dat" using 1:3 title "Fluid velocity" with lines , "simu_impliciteV1/out".i."_Nx".ARG1."_Nt".ARG2."_PH0.dat" using 1:4 title "Fluid WH0" with lines, "simu_impliciteV1/out".i."_Nx".ARG1."_Nt".ARG2."_PH0.dat" using 1:5 title "Temperature" with lines; 
+    set multiplot layout 2,1 title "Sound waves in Rarefied Gas \nNx = ".ARG1." and Nt = ".ARG2
+        set xrange [0:100] #until xmax=D
+        set yrange [-2:2.5]
+        set title " Fluid Pressure/velocity over time"
+        plot "simu_impliciteV1/out".i."_Nx".ARG1."_Nt".ARG2."_PH0.dat" using 1:2 title "Pressure PH0" with lines,"simu_impliciteV1/out".i."_Nx".ARG1."_Nt".ARG2."_PH0.dat" using 1:3 title "Velocity uH0" with lines,"simu_impliciteV1/out".i."_Nx".ARG1."_Nt".ARG2."_PH0.dat" using 1:4 title "Denisty WH0" with lines;
+        
+        set xrange [0:10] #until xmax=D
+        set yrange [-1:1]
+        set title "Plot of Temperatures"
+        plot "simu_impliciteV1/out".i."_Nx".ARG1."_Nt".ARG2."_PH0.dat" using 1:5 title "TemperatureH0" with lines,"simu_impliciteV1/out".i."_Nx".ARG1."_Nt".ARG2."_PH0.dat" using 6:7 title "TemperatureB0" with lines,"simu_impliciteV1/out".i."_Nx".ARG1."_Nt".ARG2."_PH0.dat" using 6:8 title "DensityB0" with lines;
+	unset multiplot
 	i = i+step;
 }
 
-set output
+# set output
+i = 0
+# print "FIRST Order"
+if(order == 1)
+{
+    set term gif animate size 640,480
+    set output "Generated_files/FOrder_Pressure_evolution_Nx_".ARG1."_Nt_".ARG2.".gif"
+
+    while(i <= n){
+#         set multiplot layout 2,1 title "Sound waves in Rarefied Gas \nNx = ".ARG1." and Nt = ".ARG2
+            set xrange [0:10] #until xmax=D
+            set yrange [-1:1]
+            set title " Fluid Pressure/velocity over time"
+            plot "simu_impliciteV1/out".i."_Nx".ARG1."_Nt".ARG2."_PH0.dat" using 6:9 title "UB1" with lines;
+            
+#             set xrange [0:10] #until xmax=D
+#             set yrange [-1:1]
+#             set title "Plot of Temperatures"
+#             plot "simu_impliciteV1/out".i."_Nx".ARG1."_Nt".ARG2."_PH0.dat" using 1:5 title "TemperatureH0" with lines,"simu_impliciteV1/out".i."_Nx".ARG1."_Nt".ARG2."_PH0.dat" using 6:7 title "TemperatureB0" with lines,"simu_impliciteV1/out".i."_Nx".ARG1."_Nt".ARG2."_PH0.dat" using 6:8 title "DensityB0" with lines;
+#         unset multiplot
+        i = i+step;
+    }
+}

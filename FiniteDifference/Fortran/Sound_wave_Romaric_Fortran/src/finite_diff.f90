@@ -27,7 +27,9 @@
 module Global_Var
     double precision, allocatable :: A(:,:),Atau(:,:)
     double precision, allocatable :: B(:),Btau(:)
-    double precision, allocatable :: WH0(:),TH0(:),PB1(:)
+    double precision, allocatable :: WH0(:),TH0(:),PB1(:),TB0(:)
+    double precision, allocatable :: WB0(:),UB1(:)
+    integer ::order
     character(len=30) :: dir_name
     
     contains
@@ -73,17 +75,33 @@ INTERFACE
         double precision ::accel
     end function acceleration
     
+    subroutine constr_matrix_A(Nx,Const_C)
+        double precision,Intent(IN):: Const_C
+        integer,intent(IN) :: Nx
+        integer ::i,error
+    end subroutine constr_matrix_A
+    
+    subroutine plot_sol(Nx,Nt,n,PH0,UH0,X,Y)
+        double precision,Intent(IN)::PH0(Nx+1),UH0(Nx+1)
+        double precision,Intent(IN)::X(Nx+1),Y(Nx+1)
+        integer,Intent(In)::n,Nx,Nt
+        character(len=100)::fname,tmpstr='',strn
+        logical :: exist
+        integer :: i
+    end subroutine plot_sol
+    
 END INTERFACE
 
     ! type declaration statements
-    integer::Nx,Nt,error!,n_images,image_periode
+    integer::Nx,Ny,Nt,error!,n_images,image_periode
     integer::i,nt_i,n_images=1000,periode_images
     double precision ::PI=4.D0*DATAN(1.D0) ,acc
     double precision :: X_min,X_max,dx,Final_time,dt,dt_over_dx,Const_C
-    double precision, allocatable :: X(:),PH0(:),next_PH0(:),before_PH0(:)
+    double precision :: dy,dy_over_dt,dt_over_dy2,Const_D,Y_min,Y_max
+    double precision, allocatable :: X(:),Y(:),PH0(:),next_PH0(:),before_PH0(:)
     double precision, allocatable :: Ainv(:,:),Atauinv(:,:),UH0(:),next_UH0(:)
-    double precision, allocatable :: next_WH0(:)
-    double precision :: alpha, beta
+    double precision, allocatable :: next_WH0(:),next_TB0(:),next_WB0(:)
+    double precision :: alpha, beta , gamma2 , epsilon
     double precision :: start, finish
     logical :: exist
     character(len=30)::fname="Generated_files/time_file.txt"
@@ -110,11 +128,14 @@ END INTERFACE
 
     nb_arg=iargc()
     alpha=1.d0; beta=0.d0
+    epsilon=0.1
+    gamma2 = 1.922284066!1 BKW model
     dir_name = 'simu_impliciteV1/'    
     ! spatial domain and mesh
     X_min = 0.0
     X_max = 100.0
-    Nx= 1000
+    Nx = 1000
+    order=0
 
     ! temporal domain
     Final_time = 200*PI! t in [0,Final_time]
@@ -154,6 +175,11 @@ END INTERFACE
                 call getarg(i,arg)
                 read(arg,*)n_images
                 print*,"nimages=",n_images
+            case ('--order')
+                i=i+1
+                call getarg(i,arg)
+                read(arg,*)order
+                print*,"order=",order
             case default
                 print '(a,a,/)', 'Unrecognized command-line option: ', arg
                 call print_help()
@@ -162,22 +188,53 @@ END INTERFACE
         i=i+1
     end do
     
+    Y_min = X_min
+    Y_max = X_max
+    Ny = Nx
     !number of images generated
+    if(n_images .gt. nt) then
+        n_images=nt
+    endif
     periode_images = int(Nt*1./n_images)
     dx = (X_max-X_min)*1.0/Nx
+    dy = (Y_max-Y_min)*1.0/Ny
     dt =  Final_time * 1.0/Nt
     dt_over_dx = (1.0*dt)/dx
-    Const_C=-(5./6)*(dt_over_dx*dt_over_dx)
+    dy_over_dt = (1.0*dy)/(dt)
+    dt_over_dy2 = (1.0*dt)/(dy*dy)
+    Const_C =-(5./6)*(dt_over_dx*dt_over_dx)
+    Const_D = (gamma2/2.0)*dt_over_dy2
+    
+    if(order == 0) then
+        print*,"*********************************"
+        print*,"*      Leading Order system     *"
+        print*,"*********************************"
+    else if (order == 1) then
+        print*,"*********************************"
+        print*,"*    First order of epsilon     *"
+        print*,"*********************************"
+    else
+        print*,"*********************************"
+        print*,"*    Second order of epsilon    *"
+        print*,"*********************************"
+        
+    endif
+    
+    print*,"Y values (Ymin,Ymax,Ny,dy,dt,dt_over_dy2,Const_D)=(",&
+    Y_min,Y_max,Ny,dy,dt,dt_over_dy2,Const_D,")"
     
     CALL cpu_time(start)
     
-    allocate(X(Nx+1),before_PH0(Nx+1),PH0(Nx+1),next_PH0(Nx+1),UH0(Nx+1),next_UH0(Nx+1),stat=error)
+    allocate(X(Nx+1),before_PH0(Nx+1),PH0(Nx+1),next_PH0(Nx+1)&
+    ,UH0(Nx+1),next_UH0(Nx+1),stat=error)
     if (error.ne.0) then
         print*,'error: could not allocate memory for array X or PH0 or next or before or B, Nx+1=',Nx+1
         stop
     endif
     
-    allocate(WH0(Nx+1),next_WH0(Nx+1),TH0(Nx+1),PB1(Nx+1),stat=error)
+    allocate(WH0(Nx+1),next_WH0(Nx+1),TH0(Nx+1),PB1(Nx+1)&
+    ,TB0(Ny+1),next_TB0(Ny+1),Y(Ny+1),WB0(Ny+1)&
+    ,next_WB0(Ny+1),UB1(Ny+1),stat=error)
     if (error.ne.0) then
         print*,'error: could not allocate memory for array WH0 or TH0 or next or before or B, Nx+1=',Nx+1
         stop
@@ -198,10 +255,13 @@ END INTERFACE
     !omega
     WH0(:)=0.0
     next_WH0(:)=0.0
+    WB0(:)=0.0
+    next_WB0=0.0
     
     !temperature
     TH0(:)=0.0
-    
+    TB0(:)=0.0
+    next_TB0(:)=0.0
 !     executable statements  
 !     print*,"Some results Nt",Nt
 !     print*,"Some results Nx",Nx
@@ -211,16 +271,21 @@ END INTERFACE
     !$OMP PARALLEL DO 
     do i=1,Nx+1
         X(i) = X_min + (i-1)*dx
+        Y(i) = epsilon*(Y_min + (i-1)*dy)
     end do
     !$OMP END PARALLEL DO 
     
     CALL constr_matrix_A(Nx,Const_C)
-    CALL plot_sol(Nx,Nt,0,PH0,UH0,X)
+    CALL constr_matrix_Atau(Ny,Const_D)
+    CALL plot_sol(Nx,Nt,0,PH0,UH0,X,Y)
     next_UH0(1)=velocity(dt)
     next_UH0(Nx+1)=0.0
     next_UH0(2:Nx)=UH0(2:Nx)-1.0/2.0*dt_over_dx*(next_PH0(2:Nx)-next_PH0(1:Nx-1))
     UH0(:)=next_UH0(:)
-    CALL plot_sol(Nx,Nt,1,PH0,UH0,X)
+    next_WH0(:)=3.0/5.0*(next_PH0(:)-PH0(:))+WH0(:)
+    TH0(:)=next_PH0(:)-next_WH0(:)  
+    WH0(:)=next_WH0(:)
+    CALL plot_sol(Nx,Nt,1,PH0,UH0,X,Y)
     
 !     do i=1,Nx-1
 !         print*,real( A(i,:) ) 
@@ -233,10 +298,12 @@ END INTERFACE
     endif
     
     Ainv=inv(A)
+    Atauinv=inv(Atau)
     do nt_i=2,Nt
 !         print*,"----------------Nt=",nt_i,"----------------"
         acc=acceleration (nt_i*dt)
         CALL constr_vect_B(Const_C,dx,acc,Nx,before_PH0(2:Nx),PH0(2:Nx))
+        CALL constr_vect_Btau(Const_D,TH0(1),Ny,TB0(2:Ny))
         
 !         print*,"B vector"
 !         do i=1,Nx-1
@@ -247,7 +314,11 @@ END INTERFACE
 !             print*,real( Ainv(i,:) ) 
 !         end do
         
-        CALL DGEMV('N',size(A,1),size(A,2),alpha,Ainv,size(A,2),B,1,beta,next_PH0(2:Nx),1)
+        ! Wave equation resolution
+        CALL DGEMV('N',size(Ainv,1),size(Ainv,2),alpha,Ainv,size(Ainv,2),B,1,beta,next_PH0(2:Nx),1)
+        
+        ! Diffusion equation resolution
+        CALL DGEMV('N',size(Atauinv,1),size(Atauinv,2),alpha,Atauinv,size(Atauinv,2),Btau,1,beta,next_TB0(2:Ny),1)
         
         next_PH0(1)= next_PH0(2) + 2*dx*acc
         next_PH0(Nx+1)=next_PH0(Nx)
@@ -258,9 +329,12 @@ END INTERFACE
         
         
         !omega and temperature
-        
         next_WH0(:)=3.0/5.0*(next_PH0(:)-PH0(:))+WH0(:)
-        TH0(:)=next_PH0(:)-next_WH0(:)        
+        next_TB0(1)=-TH0(int(1.0/epsilon))
+        next_TB0(Ny+1)=0
+        TH0(:)=next_PH0(:)-next_WH0(:) 
+        next_WB0(:)=-TB0(:)
+        
     !     print*,"Next PH0"
     !     do i=1,Nx+1
     !         print*,real( next_PH0(i) ) 
@@ -270,12 +344,19 @@ END INTERFACE
     !     do i=1,Nx+1
     !         print*,real( PH0(i) ) 
     !     end do
+        
+        if(order .ge. 1) then
+            CALL  first_orderUB1(Ny,dy_over_dt,next_WB0)
+        endif
         before_PH0(:)=PH0(:)
         PH0(:)=next_PH0(:)
         UH0(:)=next_UH0(:)
+        WH0(:)=next_WH0(:)
+        TB0(:)=next_TB0(:)
+        WB0(:)=next_WB0(:)
         
         if ( (MOD((nt_i),periode_images) == 0) .OR. ((nt_i) == Nt) ) then
-            CALL plot_sol(Nx,Nt,nt_i,PH0,UH0,X)
+            CALL plot_sol(Nx,Nt,nt_i,PH0,UH0,X,Y)
         endif
         
     !     print*,"after aff PH0"
@@ -301,6 +382,7 @@ END INTERFACE
     write(125,*)'Nx =',Nx
     write(125,*)'Nt =',Nt
     write(125,*)'Nfiles =',n_images
+    write(125,*)'order=',order
     write(125,*)'Time =',finish-start,' seconds.'
     write(*,*)'Time =',finish-start,' seconds.'
     write(125,*)'**********************************************************'
@@ -310,12 +392,13 @@ END INTERFACE
     !-------------------END OF program-------------------
     
     ! deallocation and end of program
-    deallocate(X,PH0,next_PH0,before_PH0,TH0,PB1,stat=error)
+    deallocate(X,PH0,next_PH0,before_PH0,TH0,PB1,Atau,Btau,&
+    TB0,next_TB0,stat=error)
     if (error.ne.0) then
         print*,'error in deallocating array'
     endif
     
-    deallocate(A,Ainv,B,WH0,next_WH0,UH0,next_UH0,stat=error)
+    deallocate(A,Ainv,B,WH0,next_WH0,UH0,next_UH0,Atauinv,stat=error)
     if (error.ne.0) then
         print*,'error in deallocating array'
     endif
@@ -337,6 +420,7 @@ END INTERFACE
         print  '(a)','  -d,         [0,D] space interval'
         print  '(a)','  --time,     [0,T] time interval'
         print  '(a)','  --nimages,  number of images'
+        print  '(a)','  --order     Asymptotic order '
         print  '(a)','  -h, --help  print usage information and exit'
     end subroutine print_help
 end program finite_diff

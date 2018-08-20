@@ -18,14 +18,14 @@
 
 ! We want to resolve numericaly the following PDE
 ! d_t tB0 - 1.0/2 *gamma2 d_yy tB0 = 0
-! with P the temparature
+! with t the temparature
 
 
-subroutine constr_matrix_Atau(Ny,Const_C)
+subroutine constr_matrix_Atau(Ny,Const_D)
 use Global_Var
 implicit none
 
-    double precision,Intent(IN):: Const_C
+    double precision,Intent(IN):: Const_D
     integer,intent(IN) :: Ny
     integer ::i,error
     
@@ -35,19 +35,19 @@ implicit none
         stop
     endif
     Atau(:,:)=0.0
-    Atau(1,1)=1-Const_C
-    Atau(1,2)=Const_C
+    Atau(1,1)=1+2*Const_D
+    Atau(1,2)=-Const_D
     
     !$OMP PARALLEL DO 
     do i=2,Ny-2
-        Atau(i,i-1)=Const_C
-        Atau(i,i)=1-2*Const_C
-        Atau(i,i+1)=Const_C
+        Atau(i,i-1)=-Const_D
+        Atau(i,i)=1+2*Const_D
+        Atau(i,i+1)=-Const_D
     enddo
     !$OMP END PARALLEL DO
     
-    Atau(Ny-1,Ny-2)=Const_c
-    Atau(Ny-1,Ny-1)=1-Const_C
+    Atau(Ny-1,Ny-2)=-Const_D
+    Atau(Ny-1,Ny-1)=1+2*Const_D
 
 end subroutine constr_matrix_Atau
 
@@ -60,7 +60,7 @@ implicit none
     double precision,Intent(IN)::Tn(Ny-1)
     integer ::i
     
-    Btau(1)=2*Tn(1)-Const_D*tauh0
+    Btau(1)=Tn(1)-Const_D*tauh0
     !$OMP PARALLEL DO 
     do i=2,Ny-1
         Btau(i)=Tn(i)
