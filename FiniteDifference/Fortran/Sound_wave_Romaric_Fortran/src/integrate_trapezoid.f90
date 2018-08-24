@@ -19,6 +19,8 @@
 !! approximation. Note that the mesh spacing of x does not have to be uniform.
 
 pure function integrate(x, y) result(r)
+    implicit none
+    
     double precision, intent(in)  :: x(:)         !! Variable x
     double precision, intent(in)  :: y(size(x))   !! Function y(x)
     double precision              :: r            !! Integral ∫y(x)·dx
@@ -27,4 +29,4 @@ pure function integrate(x, y) result(r)
     associate(n => size(x))
       r = sum((y(1+1:n-0) + y(1+0:n-1))*(x(1+1:n-0) - x(1+0:n-1)))/2
     end associate
-  end function
+  end function integrate

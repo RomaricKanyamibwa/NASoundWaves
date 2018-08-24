@@ -28,7 +28,7 @@ module Global_Var
     double precision, allocatable :: A(:,:),Atau(:,:)
     double precision, allocatable :: B(:),Btau(:)
     double precision, allocatable :: WH0(:),TH0(:),PB1(:),TB0(:)
-    double precision, allocatable :: WB0(:),UB1(:)
+    double precision, allocatable :: WB0(:)
     integer ::order
     character(len=30) :: dir_name
     
@@ -56,6 +56,7 @@ end module Global_Var
 program finite_diff
 
 use Global_Var
+use First_Order
 ! use omp_lib
 implicit none
 
@@ -81,6 +82,13 @@ INTERFACE
         integer ::i,error
     end subroutine constr_matrix_A
     
+    subroutine constr_vect_B(Const_C,dx,acc,Nx,Pn1,Pn2)
+        double precision,Intent(IN):: Const_C,dx,acc
+        integer,Intent(IN)::Nx
+        double precision,Intent(IN)::Pn1(Nx-1),Pn2(Nx-1)
+        integer ::i
+    end subroutine constr_vect_B
+    
     subroutine plot_sol(Nx,Nt,n,PH0,UH0,X,Y)
         double precision,Intent(IN)::PH0(Nx+1),UH0(Nx+1)
         double precision,Intent(IN)::X(Nx+1),Y(Nx+1)
@@ -89,6 +97,12 @@ INTERFACE
         logical :: exist
         integer :: i
     end subroutine plot_sol
+    
+    subroutine first_orderUB1(Ny,dt,Y,next_WB0)
+        double precision,Intent(In)::dt,Y(Ny+1),next_WB0(Ny+1)
+        integer,Intent(In)::Ny
+        integer::i
+    end subroutine first_orderUB1
     
 END INTERFACE
 
@@ -101,6 +115,9 @@ END INTERFACE
     double precision, allocatable :: X(:),Y(:),PH0(:),next_PH0(:),before_PH0(:)
     double precision, allocatable :: Ainv(:,:),Atauinv(:,:),UH0(:),next_UH0(:)
     double precision, allocatable :: next_WH0(:),next_TB0(:),next_WB0(:)
+    
+    !First Order quantities
+    !double precision, allocatable :: next_PH1(:),before_PH1(:)
     double precision :: alpha, beta , gamma2 , epsilon
     double precision :: start, finish
     logical :: exist
@@ -205,21 +222,6 @@ END INTERFACE
     Const_C =-(5./6)*(dt_over_dx*dt_over_dx)
     Const_D = (gamma2/2.0)*dt_over_dy2
     
-    if(order == 0) then
-        print*,"*********************************"
-        print*,"*      Leading Order system     *"
-        print*,"*********************************"
-    else if (order == 1) then
-        print*,"*********************************"
-        print*,"*    First order of epsilon     *"
-        print*,"*********************************"
-    else
-        print*,"*********************************"
-        print*,"*    Second order of epsilon    *"
-        print*,"*********************************"
-        
-    endif
-    
     print*,"Y values (Ymin,Ymax,Ny,dy,dt,dt_over_dy2,Const_D)=(",&
     Y_min,Y_max,Ny,dy,dt,dt_over_dy2,Const_D,")"
     
@@ -232,14 +234,32 @@ END INTERFACE
         stop
     endif
     
-    allocate(WH0(Nx+1),next_WH0(Nx+1),TH0(Nx+1),PB1(Nx+1)&
-    ,TB0(Ny+1),next_TB0(Ny+1),Y(Ny+1),WB0(Ny+1)&
-    ,next_WB0(Ny+1),UB1(Ny+1),stat=error)
+    allocate(WH0(Nx+1),next_WH0(Nx+1),TH0(Nx+1),PB1(Nx+1),TB0(Ny+1)&
+    ,next_TB0(Ny+1),Y(Ny+1),WB0(Ny+1),next_WB0(Ny+1),stat=error)
     if (error.ne.0) then
         print*,'error: could not allocate memory for array WH0 or TH0 or next or before or B, Nx+1=',Nx+1
         stop
     endif
+    
+    if(order == 0) then
+        print*,"*********************************"
+        print*,"*      Leading Order system     *"
+        print*,"*********************************"
+    else if (order == 1) then
+!         use First_Order
+        CALL InitFirstOrderQuant(Nx,Ny)
+        print*,"*********************************"
+        print*,"*    First order of epsilon     *"
+        print*,"*********************************"
+    else
+!         use First_Order
+        CALL InitFirstOrderQuant(Nx,Ny)
+        print*,"*********************************"
+        print*,"*    Second order of epsilon    *"
+        print*,"*********************************"
         
+    endif
+    
     !Initialisation
     !pressure
     PH0(:)=0.0
@@ -256,7 +276,7 @@ END INTERFACE
     WH0(:)=0.0
     next_WH0(:)=0.0
     WB0(:)=0.0
-    next_WB0=0.0
+    next_WB0(:)=0.0
     
     !temperature
     TH0(:)=0.0
@@ -285,11 +305,22 @@ END INTERFACE
     next_WH0(:)=3.0/5.0*(next_PH0(:)-PH0(:))+WH0(:)
     TH0(:)=next_PH0(:)-next_WH0(:)  
     WH0(:)=next_WH0(:)
+    
+    
+    !First Order
+    
+!     if(order .ge. 1) then
+!         next_UH1(1)=-UB1(1)
+!         next_UH1(Nx+1)=0.0
+!         next_UH1(2:Nx)=UH1(2:Nx)-1.0/2.0*dt_over_dx*(next_PH1(2:Nx)-next_PH1(1:Nx-1))
+!         UH1(:)=next_UH1(:)
+!         next_WH1(:)=3.0/5.0*(next_PH1(:)-PH1(:))+WH1(:)
+!         TH1(:)=next_PH1(:)-next_WH1(:)  
+!         WH1(:)=next_WH1(:)
+!     endif
+    
     CALL plot_sol(Nx,Nt,1,PH0,UH0,X,Y)
     
-!     do i=1,Nx-1
-!         print*,real( A(i,:) ) 
-!     end do
     
     allocate(B(Nx-1),Btau(Nx-1),Ainv(Nx-1,Nx-1),Atauinv(Nx-1,Nx-1),stat=error)
     if (error.ne.0) then
@@ -304,15 +335,6 @@ END INTERFACE
         acc=acceleration (nt_i*dt)
         CALL constr_vect_B(Const_C,dx,acc,Nx,before_PH0(2:Nx),PH0(2:Nx))
         CALL constr_vect_Btau(Const_D,TH0(1),Ny,TB0(2:Ny))
-        
-!         print*,"B vector"
-!         do i=1,Nx-1
-!             print*,real( B(i) ) 
-!         end do
-!         print*,"Ainv"
-!         do i=1,Nx-1
-!             print*,real( Ainv(i,:) ) 
-!         end do
         
         ! Wave equation resolution
         CALL DGEMV('N',size(Ainv,1),size(Ainv,2),alpha,Ainv,size(Ainv,2),B,1,beta,next_PH0(2:Nx),1)
@@ -330,7 +352,7 @@ END INTERFACE
         
         !omega and temperature
         next_WH0(:)=3.0/5.0*(next_PH0(:)-PH0(:))+WH0(:)
-        next_TB0(1)=-TH0(int(1.0/epsilon))
+        next_TB0(1)=-TH0(1)
         next_TB0(Ny+1)=0
         TH0(:)=next_PH0(:)-next_WH0(:) 
         next_WB0(:)=-TB0(:)
@@ -346,14 +368,45 @@ END INTERFACE
     !     end do
         
         if(order .ge. 1) then
-            CALL  first_orderUB1(Ny,dy_over_dt,next_WB0)
+            CALL  first_orderUB1(Ny,dt,Y,next_WB0)
+            !PressureH1
+            CALL constr_vect_B(-Const_C,dx&
+            ,(next_UB1(1)-UB1(1))/dt&
+            ,Nx,before_PH1(2:Nx),PH1(2:Nx))
+            
+            ! Wave equation resolution
+            CALL DGEMV('N',size(Ainv,1),size(Ainv,2),alpha,Ainv,size(Ainv,2),B,1,beta,next_PH1(2:Nx),1)
+
+            
+            next_PH1(1)= next_PH1(2) - 2*dx*(next_UB1(1)-UB1(1))/dt
+            next_PH1(Nx+1)=next_PH1(Nx)
+            
+            next_UH1(1)=-UB1(1)
+            next_UH1(Nx+1)=0.0
+            next_UH1(2:Nx)=UH1(2:Nx)-1.0/2.0*dt_over_dx*(next_PH1(2:Nx)-next_PH1(1:Nx-1))
+            
+            !omega and temperature
+            next_WH1(:)=3.0/5.0*(next_PH1(:)-PH1(:))+WH1(:)
+!             next_TB1(1)=-TH1(1)
+!             next_TB1(Ny+1)=0
+            TH1(:)=next_PH1(:)-next_WH1(:) 
+!             next_WB1(:)=-TB1(:)
         endif
+        !Leading Order
         before_PH0(:)=PH0(:)
         PH0(:)=next_PH0(:)
         UH0(:)=next_UH0(:)
         WH0(:)=next_WH0(:)
         TB0(:)=next_TB0(:)
         WB0(:)=next_WB0(:)
+        !First Order
+        if(order .ge. 1) then
+            UB1(:)=next_UB1(:)
+            before_PH1(:)=PH1(:)
+            PH1(:)=next_PH1(:)
+            UH1(:)=next_UH1(:)
+            WH1(:)=next_WH1(:)
+        endif
         
         if ( (MOD((nt_i),periode_images) == 0) .OR. ((nt_i) == Nt) ) then
             CALL plot_sol(Nx,Nt,nt_i,PH0,UH0,X,Y)
@@ -398,9 +451,14 @@ END INTERFACE
         print*,'error in deallocating array'
     endif
     
-    deallocate(A,Ainv,B,WH0,next_WH0,UH0,next_UH0,Atauinv,stat=error)
+    deallocate(A,Ainv,B,WH0,next_WH0,UH0,next_UH0,Atauinv,WB0&
+    ,next_WB0,stat=error)
     if (error.ne.0) then
         print*,'error in deallocating array'
+    endif
+    
+    if(order .ge. 1) then
+        CALL  FirstOrderDealloc()
     endif
 
     

@@ -45,12 +45,16 @@ print "Generating gif image . . . . . ."
 # plot "simu_impliciteV1/out1_Nx".ARG1."_Nt".ARG2."_PH0.dat" using 1:2 title "Fluid pressure";
 while(i <= n){
 #out0_Nx5000_Nt5000_PH0.dat
-    set multiplot layout 2,1 title "Sound waves in Rarefied Gas \nNx = ".ARG1." and Nt = ".ARG2
+    set multiplot layout 2,1 title "Leading Order:Sound waves in Rarefied Gas \nNx = ".ARG1." and Nt = ".ARG2
+        set xlabel 'X'
+        set ylabel 'h'
         set xrange [0:100] #until xmax=D
         set yrange [-2:2.5]
         set title " Fluid Pressure/velocity over time"
-        plot "simu_impliciteV1/out".i."_Nx".ARG1."_Nt".ARG2."_PH0.dat" using 1:2 title "Pressure PH0" with lines,"simu_impliciteV1/out".i."_Nx".ARG1."_Nt".ARG2."_PH0.dat" using 1:3 title "Velocity uH0" with lines,"simu_impliciteV1/out".i."_Nx".ARG1."_Nt".ARG2."_PH0.dat" using 1:4 title "Denisty WH0" with lines;
+        plot "simu_impliciteV1/out".i."_Nx".ARG1."_Nt".ARG2."_PH0.dat" using 1:2 title "Pressure PH0" with lines,"simu_impliciteV1/out".i."_Nx".ARG1."_Nt".ARG2."_PH0.dat" using 1:3 title "Velocity uH0" with lines,"simu_impliciteV1/out".i."_Nx".ARG1."_Nt".ARG2."_PH0.dat" using 1:4 title "Density WH0" with lines,"simu_impliciteV1/out".i."_Nx".ARG1."_Nt".ARG2."_PH0.dat" using 1:5 title "TemperatureH0" with lines;
         
+        set xlabel 'Y'
+        set ylabel 'h'
         set xrange [0:10] #until xmax=D
         set yrange [-1:1]
         set title "Plot of Temperatures"
@@ -62,23 +66,27 @@ while(i <= n){
 # set output
 i = 0
 # print "FIRST Order"
-if(order == 1)
-{
-    set term gif animate size 640,480
+order=order+0
+if(order >= 1){
+    set term gif animate size 640,720
     set output "Generated_files/FOrder_Pressure_evolution_Nx_".ARG1."_Nt_".ARG2.".gif"
 
     while(i <= n){
-#         set multiplot layout 2,1 title "Sound waves in Rarefied Gas \nNx = ".ARG1." and Nt = ".ARG2
+        set multiplot layout 2,1 title "First Order:Sound waves in Rarefied Gas \nNx = ".ARG1." and Nt = ".ARG2
+            set xlabel 'Y'
+            set ylabel 'h'
             set xrange [0:10] #until xmax=D
             set yrange [-1:1]
-            set title " Fluid Pressure/velocity over time"
+            set title " Boundary velocity over time"
             plot "simu_impliciteV1/out".i."_Nx".ARG1."_Nt".ARG2."_PH0.dat" using 6:9 title "UB1" with lines;
             
-#             set xrange [0:10] #until xmax=D
-#             set yrange [-1:1]
-#             set title "Plot of Temperatures"
-#             plot "simu_impliciteV1/out".i."_Nx".ARG1."_Nt".ARG2."_PH0.dat" using 1:5 title "TemperatureH0" with lines,"simu_impliciteV1/out".i."_Nx".ARG1."_Nt".ARG2."_PH0.dat" using 6:7 title "TemperatureB0" with lines,"simu_impliciteV1/out".i."_Nx".ARG1."_Nt".ARG2."_PH0.dat" using 6:8 title "DensityB0" with lines;
-#         unset multiplot
+            set xlabel 'X'
+            set ylabel 'h'
+            set xrange [0:100] #until xmax=D
+            set yrange [-1:1]
+            set title "Fluid pressure over time"
+            plot "simu_impliciteV1/out".i."_Nx".ARG1."_Nt".ARG2."_PH0.dat" using 1:10 title "PressureH1" with lines,"simu_impliciteV1/out".i."_Nx".ARG1."_Nt".ARG2."_PH0.dat" using 1:11 title "Velocity uH1" with lines,"simu_impliciteV1/out".i."_Nx".ARG1."_Nt".ARG2."_PH0.dat" using 1:12 title "Density WH1" with lines,"simu_impliciteV1/out".i."_Nx".ARG1."_Nt".ARG2."_PH0.dat" using 1:13 title "TemperatureH1" with lines;
+        unset multiplot
         i = i+step;
     }
 }

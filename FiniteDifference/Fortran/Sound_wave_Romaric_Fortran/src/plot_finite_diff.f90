@@ -18,7 +18,9 @@
 ! subroutine for .dat files creation
 subroutine plot_sol(Nx,Nt,n,PH0,UH0,X,Y)
 use Global_Var
+use First_Order
 implicit none
+
     double precision,Intent(IN)::PH0(Nx+1),UH0(Nx+1)
     double precision,Intent(IN)::X(Nx+1),Y(Nx+1)
     integer,Intent(In)::n,Nx,Nt
@@ -59,9 +61,12 @@ implicit none
     
         do i=1,Nx+1
             write(1,*)X(i)," ",PH0(i)," ",UH0(i)," ",WH0(i)," ",TH0(i) &
-            ," ",Y(i)," ",TB0(i)," ",WB0(i)," ",UB1(i)
+            ," ",Y(i)," ",TB0(i)," ",WB0(i)," ",UB1(i)," ",PH1(i) &
+            ," ",UH1(i)," ",WH1(i)," ",TH1(i)
         enddo
-        print*,trim("---UB1 min/max = "), minval(UB1),trim("/"), maxval(UB1),"---"
+        print*,trim("---PH1 min/max = "), minval(PH1),trim("/"), maxval(PH1),"---"
+        
+        print*,trim("---UH1 min/max = "), minval(UH1),trim("/"), maxval(UH1),"---"
         
     endif
     

@@ -20,6 +20,8 @@
 ! Returns the inverse of a matrix calculated by finding the LU
 ! decomposition.  Depends on LAPACK.
 function inv(A) result(Ainv)
+  implicit none
+  
   double precision, dimension(:,:), Intent(in) :: A
   double precision, dimension(size(A,1),size(A,2)) :: Ainv
 

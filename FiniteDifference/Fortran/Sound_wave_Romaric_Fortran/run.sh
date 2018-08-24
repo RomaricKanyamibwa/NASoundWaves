@@ -20,7 +20,8 @@ echo "Step:$Step"
 
 make
 echo "./bin/SoundWaves -x $Nx -t $Nt --nimages $NumImages --order $Order"
-
+export OMP_NUM_THREADS=4
+export OMP_DYNAMIC=false
 ./bin/SoundWaves -x $Nx -t $Nt --nimages $NumImages --order $Order
 
 echo "gnuplot -c $load \"gnuplot_main.gp\" $Nx $Nt $Step $Order"
